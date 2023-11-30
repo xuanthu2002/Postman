@@ -1,15 +1,15 @@
 package postman;
 
-import postman.model.HttpMethod;
-import postman.model.HttpRequest;
-import postman.model.HttpResponse;
-import postman.model.HttpUrl;
+import postman.util.HttpMethod;
+import postman.util.HttpRequest;
+import postman.util.HttpResponse;
+import postman.util.HttpUrl;
 import postman.service.HttpClient;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import postman.view.PostmanView;
+import postman.gui.PostmanView;
 
 public class Postman {
     public static void main(String[] args) throws IOException {

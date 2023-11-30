@@ -1,4 +1,4 @@
-package postman.model;
+package postman.util;
 
 public class Cookie {
     

@@ -1,4 +1,4 @@
-package postman.model;
+package postman.util;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -6,21 +6,20 @@ import java.util.List;
 import java.util.Map;
 
 public class HttpResponse {
-    
+
     private int statusCode;
     private String statusMessage;
     private Map<String, List<String>> headers = new HashMap<>();
-    private String body;
+    private byte[] body;
     private List<Cookie> cookies = new ArrayList<>();
 
     public HttpResponse() {
     }
 
-    public HttpResponse(int statusCode, String statusMessage, String body, List<Cookie> cookies) {
+    public HttpResponse(int statusCode, String statusMessage, byte[] body) {
         this.statusCode = statusCode;
         this.statusMessage = statusMessage;
         this.body = body;
-        this.cookies = cookies;
     }
 
     public int getStatusCode() {
@@ -50,26 +49,26 @@ public class HttpResponse {
     public void setHeaders(Map<String, List<String>> headers) {
         this.headers = headers;
     }
-    
+
     public void addHeader(String key, String value) {
-        if(!headers.containsKey(key)) {
+        if (!headers.containsKey(key)) {
             headers.put(key, new ArrayList<>());
         }
         headers.get(key).add(value);
     }
-    
+
     public void addHeaders(String key, List<String> value) {
-        if(!headers.containsKey(key)) {
+        if (!headers.containsKey(key)) {
             headers.put(key, new ArrayList<>());
         }
         headers.get(key).addAll(value);
     }
 
-    public String getBody() {
+    public byte[] getBody() {
         return body;
     }
 
-    public void setBody(String body) {
+    public void setBody(byte[] body) {
         this.body = body;
     }
 
@@ -80,5 +79,4 @@ public class HttpResponse {
     public void setCookies(List<Cookie> cookies) {
         this.cookies = cookies;
     }
-    
 }
