@@ -363,7 +363,7 @@ public class PostmanView extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(methodCb, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(inUrlTxt, javax.swing.GroupLayout.DEFAULT_SIZE, 387, Short.MAX_VALUE)
+                .addComponent(inUrlTxt, javax.swing.GroupLayout.DEFAULT_SIZE, 435, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(sendButton)
                 .addContainerGap())
@@ -414,9 +414,9 @@ public class PostmanView extends javax.swing.JFrame {
 
         inHeadersTable.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                { new Boolean(true), "User-Agent", "Postman"},
-                { new Boolean(true), "Accept", "*/*"},
-                { new Boolean(false), "Accept-Encoding", "gzip, deflate, br"},
+                { true, "User-Agent", "Postman"},
+                { true, "Accept", "*/*"},
+                { false, "Accept-Encoding", "gzip, deflate, br"},
                 {false, "", ""}
             },
             new String [] {
@@ -471,11 +471,11 @@ public class PostmanView extends javax.swing.JFrame {
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 627, Short.MAX_VALUE)
+            .addGap(0, 608, Short.MAX_VALUE)
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 194, Short.MAX_VALUE)
+            .addGap(0, 85, Short.MAX_VALUE)
         );
 
         panelInputBody.add(jPanel1, "card2");
@@ -548,7 +548,7 @@ public class PostmanView extends javax.swing.JFrame {
             .addGroup(outStatusPanelLayout.createSequentialGroup()
                 .addContainerGap()
                 .addComponent(outStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 440, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(181, Short.MAX_VALUE))
+                .addContainerGap(162, Short.MAX_VALUE))
         );
         outStatusPanelLayout.setVerticalGroup(
             outStatusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -651,7 +651,6 @@ public class PostmanView extends javax.swing.JFrame {
             for (String i : Optional.ofNullable(httpResponse.getHeader("Content-Type")).orElse(new ArrayList<>())) {
                 if (i.toLowerCase().contains("charset")) {
                     charset = i.substring(i.indexOf("charset=") + 8);
-                    System.out.println(charset);
                 }
             }
 
