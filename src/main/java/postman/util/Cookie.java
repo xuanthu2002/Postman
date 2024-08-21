@@ -1,7 +1,7 @@
 package postman.util;
 
 public class Cookie {
-    
+
     private String key;
     private String value;
     private String domain;
@@ -101,6 +101,4 @@ public class Cookie {
     public void setSameSite(boolean sameSite) {
         this.sameSite = sameSite;
     }
-    
-    
 }

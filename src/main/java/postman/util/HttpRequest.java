@@ -2,15 +2,13 @@ package postman.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 
 public class HttpRequest {
 
+    private final Map<String, String> headers = new LinkedHashMap<>();
     private HttpMethod method;
     private String url;
-    private Map<String, String> headers = new LinkedHashMap<>();
-    private String body;
-    private boolean sendingFile = false;
+    private byte[] body;
 
     public HttpRequest() {
     }
@@ -40,11 +38,11 @@ public class HttpRequest {
         this.url = url;
     }
 
-    public String getBody() {
-        return Optional.ofNullable(body).orElse("");
+    public byte[] getBody() {
+        return body;
     }
 
-    public void setBody(String body) {
+    public void setBody(byte[] body) {
         this.body = body;
     }
 
@@ -52,26 +50,12 @@ public class HttpRequest {
         headers.put(key, value);
     }
 
-    public String getHeaderValue(String field) {
-        return headers.get(field);
-    }
-
     public String getStringHeaders() {
         StringBuilder headerStr = new StringBuilder();
         headerStr.append(method).append(" ").append(HttpUrl.extractPath(url)).append(" HTTP/1.0").append("\r\n");
         headerStr.append("Host: ").append(HttpUrl.extractHost(url)).append("\r\n");
-        for (String key : headers.keySet()) {
-            headerStr.append(key).append(": ").append(headers.get(key)).append("\r\n");
-        }
+        headers.forEach((key, value) -> headerStr.append(key).append(": ").append(headers.get(key)).append("\r\n"));
         return headerStr.toString();
-    }
-
-    public boolean isSendingFile() {
-        return sendingFile;
-    }
-
-    public void setSendingFile(boolean sendingFile) {
-        this.sendingFile = sendingFile;
     }
 
     @Override
@@ -79,11 +63,13 @@ public class HttpRequest {
         StringBuilder request = new StringBuilder();
         request.append(method).append(" ").append(HttpUrl.extractPath(url)).append(" HTTP/1.0").append("\r\n");
         request.append("Host: ").append(HttpUrl.extractHost(url)).append("\r\n");
-        for (String key : headers.keySet()) {
-            request.append(key).append(": ").append(headers.get(key)).append("\r\n");
-        }
+        headers.forEach((key, value) ->
+                request.append(key).append(": ").append(headers.get(key)).append("\r\n")
+        );
         request.append("\r\n");
-        request.append(Optional.ofNullable(body).orElse("")).append("\r\n");
+        if (body != null) {
+            request.append(new String(body)).append("\r\n");
+        }
         return request.toString();
     }
 }

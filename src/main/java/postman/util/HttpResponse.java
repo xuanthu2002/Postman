@@ -51,17 +51,11 @@ public class HttpResponse {
     }
 
     public void addHeader(String key, String value) {
-        if (!headers.containsKey(key)) {
-            headers.put(key, new ArrayList<>());
-        }
-        headers.get(key).add(value);
+        headers.computeIfAbsent(key, k -> new ArrayList<>()).add(value);
     }
 
     public void addHeaders(String key, List<String> value) {
-        if (!headers.containsKey(key)) {
-            headers.put(key, new ArrayList<>());
-        }
-        headers.get(key).addAll(value);
+        headers.computeIfAbsent(key, k -> new ArrayList<>()).addAll(value);
     }
 
     public byte[] getBody() {

@@ -1,8 +1,18 @@
 package postman.gui;
 
-import java.awt.CardLayout;
-import java.awt.Font;
-import java.awt.HeadlessException;
+import postman.exception.DecompressException;
+import postman.exception.URLFormatException;
+import postman.gui.constants.Colors;
+import postman.gui.constants.Fonts;
+import postman.gui.constants.Strings;
+import postman.gui.constants.Values;
+import postman.util.*;
+
+import javax.swing.*;
+import javax.swing.event.TableModelEvent;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -10,636 +20,606 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URLConnection;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
-import javax.swing.AbstractButton;
-import javax.swing.DefaultCellEditor;
-import javax.swing.DefaultComboBoxModel;
-import javax.swing.JFileChooser;
-import javax.swing.JTextField;
-import javax.swing.LookAndFeel;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
-import javax.swing.event.TableModelEvent;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.table.DefaultTableModel;
-import postman.exception.DecompressException;
-import postman.exception.URLFormatException;
-import postman.service.Decompress;
-import postman.service.HttpClient;
-import postman.service.Storage;
-import postman.util.Cookie;
-import postman.util.HttpMethod;
-import postman.util.HttpRequest;
-import postman.util.HttpRequestStorage;
-import postman.util.HttpResponse;
-import postman.util.HttpUrl;
 
 public class PostmanView extends javax.swing.JFrame {
 
     public PostmanView() {
 
-        UIManager.put("TabbedPane.font", new Font("Segoe UI", Font.PLAIN, 20));
-        UIManager.put("TableHeader.font", new Font("Segoe UI", Font.PLAIN, 20));
-        UIManager.put("Table.font", new Font("Segoe UI", Font.PLAIN, 20));
-        UIManager.put("TextArea.font", new Font("Segoe UI", Font.PLAIN, 20));
-        UIManager.put("RadioButton.font", new Font("Segoe UI", Font.PLAIN, 20));
-        UIManager.put("Label.font", new Font("Segoe UI", Font.PLAIN, 20));
-        UIManager.put("TextField.font", new Font("Segoe UI", Font.PLAIN, 20));
+        UIManager.put("TabbedPane.font", Fonts.GENERAL_PLAIN_12);
+        UIManager.put("TableHeader.font", Fonts.GENERAL_PLAIN_12);
+        UIManager.put("Table.font", Fonts.GENERAL_PLAIN_12);
+        UIManager.put("TextArea.font", Fonts.GENERAL_PLAIN_12);
+        UIManager.put("RadioButton.font", Fonts.GENERAL_PLAIN_12);
+        UIManager.put("Label.font", Fonts.GENERAL_PLAIN_12);
+        UIManager.put("TextField.font", Fonts.GENERAL_PLAIN_12);
 
         initComponents();
 
         LookAndFeel previousLF = UIManager.getLookAndFeel();
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            fileChooser = new JFileChooser();
+            mFileChoose = new JFileChooser();
             UIManager.setLookAndFeel(previousLF);
-        } catch (IllegalAccessException | UnsupportedLookAndFeelException | InstantiationException | ClassNotFoundException e) {
+        } catch (IllegalAccessException | UnsupportedLookAndFeelException | InstantiationException |
+                 ClassNotFoundException e) {
+            e.printStackTrace();
         }
 
-        JTextField cell = new JTextField();
-        cell.setFont(new Font("Segoe UI", Font.PLAIN, 20));
-        DefaultCellEditor singleclick = new DefaultCellEditor(cell);
-        singleclick.setClickCountToStart(1);
-        //set the editor as default on every column
-        for (int i = 1; i < inParamsTable.getColumnCount(); i++) {
-            inParamsTable.setDefaultEditor(inParamsTable.getColumnClass(i), singleclick);
-        }
-        for (int i = 1; i < inHeadersTable.getColumnCount(); i++) {
-            inHeadersTable.setDefaultEditor(inHeadersTable.getColumnClass(i), singleclick);
-        }
-        for (int i = 1; i < outHeadersTable.getColumnCount(); i++) {
-            outHeadersTable.setDefaultEditor(outHeadersTable.getColumnClass(i), singleclick);
-        }
-        for (int i = 1; i < outCookiesTable.getColumnCount(); i++) {
-            outCookiesTable.setDefaultEditor(outCookiesTable.getColumnClass(i), singleclick);
-        }
+        initializeRequestUIComponents();
+    }
 
-        inParamsTable.putClientProperty("terminateEditOnFocusLost", true);
-        inHeadersTable.putClientProperty("terminateEditOnFocusLost", true);
-        outCookiesTable.putClientProperty("terminateEditOnFocusLost", true);
-        outHeadersTable.putClientProperty("terminateEditOnFocusLost", true);
+    public static void main(String args[]) {
+        new PostmanView().setVisible(true);
+    }
 
-        inUrlTxt.addKeyListener(new KeyAdapter() {
+    private void initializeRequestUIComponents() {
+        configureGeneralTables();
+        configureUrlTextField();
+        configureRequestParamsTable();
+        configureRequestHeadersTable();
+        configureRequestBodyActions();
+    }
+
+    private void configureUrlTextField() {
+        mTextFieldRequestUrl.requestFocus();
+
+        mTextFieldRequestUrl.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    sendButton.doClick();
+                    mButtonSendRequest.doClick();
                     return;
                 }
-                Map<String, String> params = HttpUrl.extractParams(inUrlTxt.getText().trim());
-                DefaultTableModel model = (DefaultTableModel) inParamsTable.getModel();
-                model.setRowCount(0);
-                for (Map.Entry<String, String> entry : params.entrySet()) {
-                    model.addRow(new Object[]{true, entry.getKey(), entry.getValue()});
-                }
-                if (model.getRowCount() < 1) {
-                    model.addRow(new Object[]{false, "", ""});
-                } else if ((boolean) Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 0)).orElse(false)
-                        || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 1)).orElse("").toString().isEmpty()
-                        || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 2)).orElse("").toString().isEmpty()) {
-                    model.addRow(new Object[]{false, "", ""});
-                }
-                inParamsTable.setModel(model);
-
+                updateRequestParamsTable();
             }
         });
-
-        inParamsTable.getModel().addTableModelListener((TableModelEvent e) -> {
-            if (e.getType() == TableModelEvent.UPDATE) {
-                DefaultTableModel model = (DefaultTableModel) inParamsTable.getModel();
-                String query = "";
-                for (int i = 0; i < model.getRowCount(); i++) {
-                    String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
-                    String value = Optional.ofNullable(model.getValueAt(i, 2)).orElse("").toString();
-                    boolean check = (boolean) Optional.ofNullable(model.getValueAt(i, 0)).orElse(false);
-                    if (check) {
-                        if (key.isEmpty() && value.isEmpty()) {
-                            query = query + "&";
-                        } else {
-                            query = query + "&" + key + "=" + value;
-                        }
-                    }
-                }
-                String url = Optional.ofNullable(inUrlTxt.getText()).orElse("");
-                url = url.contains("?") ? url.substring(0, url.indexOf("?")) : url;
-                if (!query.isEmpty()) {
-                    url += "?" + query.substring(1);
-                }
-                inUrlTxt.setText(url);
-                if ((boolean) Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 0)).orElse(false)
-                        || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 1)).orElse("").toString().isEmpty()
-                        || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 2)).orElse("").toString().isEmpty()) {
-                    model.addRow(new Object[]{false, "", ""});
-                }
-                inParamsTable.setModel(model);
-            }
-        });
-
-        inHeadersTable.getModel().addTableModelListener((TableModelEvent e) -> {
-            if (e.getType() == TableModelEvent.UPDATE) {
-                DefaultTableModel model = (DefaultTableModel) inHeadersTable.getModel();
-                if ((boolean) Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 0)).orElse(false)
-                        || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 1)).orElse("").toString().isEmpty()
-                        || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 2)).orElse("").toString().isEmpty()) {
-                    model.addRow(new Object[]{false, "", ""});
-                }
-                inHeadersTable.setModel(model);
-            }
-        });
-
-        typeBodyNoneButton.addActionListener((ActionEvent e) -> {
-            CardLayout cardLayout = (CardLayout) panelInputBody.getLayout();
-            cardLayout.show(panelInputBody, "card2");
-            DefaultTableModel model = (DefaultTableModel) inHeadersTable.getModel();
-            for (int i = 0; i < model.getRowCount(); i++) {
-                String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
-                if (key.equals("Content-Type")) {
-                    model.removeRow(i);
-                }
-            }
-            inHeadersTable.setModel(model);
-        });
-
-        typeBodyTextButton.addActionListener((ActionEvent e) -> {
-            CardLayout cardLayout = (CardLayout) panelInputBody.getLayout();
-            cardLayout.show(panelInputBody, "card5");
-            DefaultTableModel model = (DefaultTableModel) inHeadersTable.getModel();
-            boolean check = true;
-            for (int i = 0; i < model.getRowCount(); i++) {
-                String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
-                if (key.equals("Content-Type")) {
-                    model.setValueAt("text/plain", i, 2);
-                    check = false;
-                }
-            }
-            if (check) {
-                model.removeRow(model.getRowCount() - 1);
-                model.addRow(new Object[]{true, "Content-Type", "text/plain"});
-                model.addRow(new Object[]{false, "", ""});
-            }
-            inHeadersTable.setModel(model);
-        });
-
-        typeBodyJsonButton.addActionListener((ActionEvent e) -> {
-            CardLayout cardLayout = (CardLayout) panelInputBody.getLayout();
-            cardLayout.show(panelInputBody, "card3");
-            DefaultTableModel model = (DefaultTableModel) inHeadersTable.getModel();
-            boolean check = true;
-            for (int i = 0; i < model.getRowCount(); i++) {
-                String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
-                if (key.equals("Content-Type")) {
-                    model.setValueAt("application/json", i, 2);
-                    check = false;
-                }
-            }
-            if (check) {
-                model.removeRow(model.getRowCount() - 1);
-                model.addRow(new Object[]{true, "Content-Type", "application/json"});
-                model.addRow(new Object[]{false, "", ""});
-            }
-            inHeadersTable.setModel(model);
-        });
-
-        typeBodyBinaryButton.addActionListener((ActionEvent e) -> {
-            CardLayout cardLayout = (CardLayout) panelInputBody.getLayout();
-            cardLayout.show(panelInputBody, "card4");
-            DefaultTableModel model = (DefaultTableModel) inHeadersTable.getModel();
-            boolean check = true;
-            for (int i = 0; i < model.getRowCount(); i++) {
-                String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
-                if (key.equals("Content-Type")) {
-                    model.setValueAt("application/octet-stream", i, 2);
-                    check = false;
-                }
-            }
-            if (check) {
-                model.removeRow(model.getRowCount() - 1);
-                model.addRow(new Object[]{true, "Content-Type", "application/octet-stream"});
-                model.addRow(new Object[]{false, "", ""});
-            }
-            inHeadersTable.setModel(model);
-        });
-
     }
 
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void configureRequestParamsTable() {
+        mTableRequestParams.getModel().addTableModelListener((TableModelEvent e) -> {
+            if (e.getType() == TableModelEvent.UPDATE) {
+                updateUrlTextField();
+                ensureEmptyRowInParamsTable();
+            }
+        });
+    }
+
+    private void configureRequestHeadersTable() {
+        mTableRequestHeaders.getModel().addTableModelListener((TableModelEvent e) -> {
+            if (e.getType() == TableModelEvent.UPDATE) {
+                ensureEmptyRowInHeadersTable();
+            }
+        });
+    }
+
+    private void configureRequestBodyActions() {
+        mRadioButtonRequestBodyNone.addActionListener((ActionEvent e) -> showRequestBodyPanel("none"));
+        mRadioButtonRequestBodyText.addActionListener((ActionEvent e) -> configureRequestBodyType("text/plain", "text"));
+        mRadioButtonRequestBodyJson.addActionListener((ActionEvent e) -> configureRequestBodyType("application/json", "text"));
+        mRadioButtonBodyBinary.addActionListener((ActionEvent e) -> configureRequestBodyType("application/octet-stream", "binary"));
+    }
+
+    private void updateRequestParamsTable() {
+        Map<String, String> params = HttpUrl.extractParams(mTextFieldRequestUrl.getText().trim());
+        DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
+        model.setRowCount(0);
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            model.addRow(new Object[]{true, entry.getKey(), entry.getValue()});
+        }
+        if (model.getRowCount() < 1) {
+            model.addRow(new Object[]{false, "", ""});
+        } else {
+            ensureEmptyRowInParamsTable();
+        }
+        mTableRequestParams.setModel(model);
+    }
+
+    private void updateUrlTextField() {
+        DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
+        StringBuilder query = new StringBuilder();
+        for (int i = 0; i < model.getRowCount(); i++) {
+            String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
+            String value = Optional.ofNullable(model.getValueAt(i, 2)).orElse("").toString();
+            boolean check = (boolean) Optional.ofNullable(model.getValueAt(i, 0)).orElse(false);
+            if (check) {
+                query.append("&").append(key.isEmpty() ? "" : key + "=").append(value);
+            }
+        }
+        String url = Optional.ofNullable(mTextFieldRequestUrl.getText()).orElse("");
+        url = url.contains("?") ? url.substring(0, url.indexOf("?")) : url;
+        if (!query.isEmpty()) {
+            url += "?" + query.substring(1);
+        }
+        mTextFieldRequestUrl.setText(url);
+    }
+
+    private void ensureEmptyRowInParamsTable() {
+        DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
+        if ((boolean) Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 0)).orElse(false)
+                || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 1)).orElse("").toString().isEmpty()
+                || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 2)).orElse("").toString().isEmpty()) {
+            model.addRow(new Object[]{false, "", ""});
+        }
+    }
+
+    private void ensureEmptyRowInHeadersTable() {
+        DefaultTableModel model = (DefaultTableModel) mTableRequestHeaders.getModel();
+        if ((boolean) Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 0)).orElse(false)
+                || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 1)).orElse("").toString().isEmpty()
+                || !Optional.ofNullable(model.getValueAt(model.getRowCount() - 1, 2)).orElse("").toString().isEmpty()) {
+            model.addRow(new Object[]{false, "", ""});
+        }
+    }
+
+    private void showRequestBodyPanel(String panelName) {
+        CardLayout cardLayout = (CardLayout) mPanelRequestBodyDetail.getLayout();
+        cardLayout.show(mPanelRequestBodyDetail, panelName);
+    }
+
+    private void configureRequestBodyType(String contentType, String panelName) {
+        showRequestBodyPanel(panelName);
+        DefaultTableModel model = (DefaultTableModel) mTableRequestHeaders.getModel();
+        boolean found = false;
+        for (int i = 0; i < model.getRowCount(); i++) {
+            String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
+            if (key.equals("Content-Type")) {
+                model.setValueAt(contentType, i, 2);
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            model.removeRow(model.getRowCount() - 1);
+            model.addRow(new Object[]{true, "Content-Type", contentType});
+            model.addRow(new Object[]{false, "", ""});
+        }
+        mTableRequestHeaders.setModel(model);
+    }
+
+    private void configureGeneralTables() {
+        JTextField cell = new JTextField();
+        cell.setFont(Fonts.GENERAL_PLAIN_12);
+        DefaultCellEditor singleClick = new DefaultCellEditor(cell);
+        singleClick.setClickCountToStart(1);
+
+        for (int i = 1; i < mTableRequestParams.getColumnCount(); i++) {
+            mTableRequestParams.setDefaultEditor(mTableRequestParams.getColumnClass(i), singleClick);
+        }
+        for (int i = 1; i < mTableRequestHeaders.getColumnCount(); i++) {
+            mTableRequestHeaders.setDefaultEditor(mTableRequestHeaders.getColumnClass(i), singleClick);
+        }
+        for (int i = 1; i < mTableResponseHeaders.getColumnCount(); i++) {
+            mTableResponseHeaders.setDefaultEditor(mTableResponseHeaders.getColumnClass(i), singleClick);
+        }
+        for (int i = 1; i < mTableResponseCookies.getColumnCount(); i++) {
+            mTableResponseCookies.setDefaultEditor(mTableResponseCookies.getColumnClass(i), singleClick);
+        }
+
+        mTableRequestParams.putClientProperty("terminateEditOnFocusLost", true);
+        mTableRequestHeaders.putClientProperty("terminateEditOnFocusLost", true);
+        mTableResponseCookies.putClientProperty("terminateEditOnFocusLost", true);
+        mTableResponseHeaders.putClientProperty("terminateEditOnFocusLost", true);
+    }
+
     private void initComponents() {
+        mButtonGroupRequestBodyType = new javax.swing.ButtonGroup();
+        mFileChoose = new javax.swing.JFileChooser();
+        mPanelMenuAbove = new javax.swing.JPanel();
+        mButtonNewRequest = new javax.swing.JButton();
+        mButtonImportRequest = new javax.swing.JButton();
+        mButtonExportRequest = new javax.swing.JButton();
+        mPanelRequest = new javax.swing.JPanel();
+        mPanelRequestUrl = new javax.swing.JPanel();
+        mComboBoxRequestMethod = new javax.swing.JComboBox<>();
+        mTextFieldRequestUrl = new javax.swing.JTextField();
+        mButtonSendRequest = new javax.swing.JButton();
+        mPanelRequestDetail = new javax.swing.JTabbedPane();
+        mPanelRequestParams = new javax.swing.JPanel();
+        scrollPaneRequestParams = new javax.swing.JScrollPane();
+        mTableRequestParams = new javax.swing.JTable();
+        mPanelRequestHeaders = new javax.swing.JPanel();
+        scrollPaneRequestHeaders = new javax.swing.JScrollPane();
+        mTableRequestHeaders = new javax.swing.JTable();
+        mPanelRequestBody = new javax.swing.JPanel();
+        mPanelRequestBodyType = new javax.swing.JPanel();
+        mRadioButtonRequestBodyNone = new javax.swing.JRadioButton();
+        mRadioButtonRequestBodyText = new javax.swing.JRadioButton();
+        mRadioButtonRequestBodyJson = new javax.swing.JRadioButton();
+        mRadioButtonBodyBinary = new javax.swing.JRadioButton();
+        mPanelRequestBodyDetail = new javax.swing.JPanel();
+        mPanelRequestBodyNone = new javax.swing.JPanel();
+        mPanelRequestBodyText = new javax.swing.JPanel();
+        mPanelRequestBodyBinary = new javax.swing.JPanel();
+        mButtonChooseInputFile = new javax.swing.JButton();
+        mLabelUploadedFile = new javax.swing.JLabel();
+        mPanelRequestBodyText = new javax.swing.JPanel();
+        scrollPaneRequestBodyText = new javax.swing.JScrollPane();
+        mTextAreaBodyText = new javax.swing.JTextArea();
+        mPanelResponse = new javax.swing.JPanel();
+        mPanelResponseStatus = new javax.swing.JPanel();
+        mLabelResponseStatus = new javax.swing.JLabel();
+        mPanelResponseDetail = new javax.swing.JPanel();
+        mTabbedPaneResponse = new javax.swing.JTabbedPane();
+        mPanelResponseBody = new javax.swing.JPanel();
+        scrollPaneResponseBody = new javax.swing.JScrollPane();
+        mTextAreaResponseBody = new javax.swing.JTextArea();
+        mPanelResponseCookies = new javax.swing.JPanel();
+        scrollPaneResponseCookies = new javax.swing.JScrollPane();
+        mTableResponseCookies = new javax.swing.JTable();
+        mPanelResponseHeaders = new javax.swing.JPanel();
+        scrollPaneResponseHeaders = new javax.swing.JScrollPane();
+        mTableResponseHeaders = new javax.swing.JTable();
 
-        typeBodyInput = new javax.swing.ButtonGroup();
-        fileChooser = new javax.swing.JFileChooser();
-        headerPanel = new javax.swing.JPanel();
-        subNew = new javax.swing.JButton();
-        subImport = new javax.swing.JButton();
-        subExport = new javax.swing.JButton();
-        inputPanel = new javax.swing.JPanel();
-        inUrlPanel = new javax.swing.JPanel();
-        methodCb = new javax.swing.JComboBox<>();
-        inUrlTxt = new javax.swing.JTextField();
-        sendButton = new javax.swing.JButton();
-        inputExtendPanel = new javax.swing.JTabbedPane();
-        inputParamsPanel = new javax.swing.JPanel();
-        jScrollPane1 = new javax.swing.JScrollPane();
-        inParamsTable = new javax.swing.JTable();
-        inputHeadersPanel = new javax.swing.JPanel();
-        jScrollPane3 = new javax.swing.JScrollPane();
-        inHeadersTable = new javax.swing.JTable();
-        inputBodyPanel = new javax.swing.JPanel();
-        typeBodyPanel = new javax.swing.JPanel();
-        typeBodyNoneButton = new javax.swing.JRadioButton();
-        typeBodyTextButton = new javax.swing.JRadioButton();
-        typeBodyJsonButton = new javax.swing.JRadioButton();
-        typeBodyBinaryButton = new javax.swing.JRadioButton();
-        panelInputBody = new javax.swing.JPanel();
-        jPanel1 = new javax.swing.JPanel();
-        jPanel2 = new javax.swing.JPanel();
-        jScrollPane5 = new javax.swing.JScrollPane();
-        inBodyJsonTxt = new javax.swing.JTextArea();
-        jPanel4 = new javax.swing.JPanel();
-        chooseInputFileBody = new javax.swing.JButton();
-        inFileNameTxt = new javax.swing.JLabel();
-        jPanel3 = new javax.swing.JPanel();
-        jScrollPane7 = new javax.swing.JScrollPane();
-        inBodyText = new javax.swing.JTextArea();
-        outputPanel = new javax.swing.JPanel();
-        outStatusPanel = new javax.swing.JPanel();
-        outStatusLabel = new javax.swing.JLabel();
-        outDetailPanel = new javax.swing.JPanel();
-        jTabbedPane1 = new javax.swing.JTabbedPane();
-        outBodyPanel = new javax.swing.JPanel();
-        jScrollPane4 = new javax.swing.JScrollPane();
-        outBodyTxt = new javax.swing.JTextArea();
-        jPanel7 = new javax.swing.JPanel();
-        jScrollPane6 = new javax.swing.JScrollPane();
-        outCookiesTable = new javax.swing.JTable();
-        outHeaderPanel = new javax.swing.JPanel();
-        jScrollPane2 = new javax.swing.JScrollPane();
-        outHeadersTable = new javax.swing.JTable();
-
-        fileChooser.setMinimumSize(new java.awt.Dimension(700, 509));
-        fileChooser.setPreferredSize(new java.awt.Dimension(700, 509));
-
+        setTitle(Strings.APP_NAME);
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setTitle("Postman");
-        setBackground(new java.awt.Color(255, 255, 255));
-        getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.Y_AXIS));
+        getContentPane().setLayout(new BorderLayout());
 
-        headerPanel.setMinimumSize(new java.awt.Dimension(0, 60));
-        headerPanel.setPreferredSize(new java.awt.Dimension(673, 60));
-        headerPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 8, 8));
+        setupMenuAbove();
 
-        subNew.setFont(new java.awt.Font("Segoe UI", 0, 20)); // NOI18N
-        subNew.setText("New");
-        subNew.setFocusPainted(false);
-        subNew.setMinimumSize(new java.awt.Dimension(108, 40));
-        subNew.setPreferredSize(new java.awt.Dimension(108, 40));
-        subNew.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                subNewActionPerformed(evt);
-            }
-        });
-        headerPanel.add(subNew);
+        setupPanelRequest();
 
-        subImport.setFont(new java.awt.Font("Segoe UI", 0, 20)); // NOI18N
-        subImport.setText("Import");
-        subImport.setFocusPainted(false);
-        subImport.setMinimumSize(new java.awt.Dimension(108, 40));
-        subImport.setPreferredSize(new java.awt.Dimension(108, 40));
-        subImport.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                subImportActionPerformed(evt);
-            }
-        });
-        headerPanel.add(subImport);
+        setupPanelResponse();
 
-        subExport.setFont(new java.awt.Font("Segoe UI", 0, 20)); // NOI18N
-        subExport.setText("Export");
-        subExport.setFocusPainted(false);
-        subExport.setMinimumSize(new java.awt.Dimension(108, 40));
-        subExport.setPreferredSize(new java.awt.Dimension(108, 40));
-        subExport.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                subExportActionPerformed(evt);
-            }
-        });
-        headerPanel.add(subExport);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        splitPane.setResizeWeight(0.4);
+        splitPane.setTopComponent(mPanelRequest);
+        splitPane.setBottomComponent(mPanelResponse);
 
-        getContentPane().add(headerPanel);
-
-        inputPanel.setPreferredSize(new java.awt.Dimension(760, 450));
-        inputPanel.setLayout(new java.awt.BorderLayout());
-
-        methodCb.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        methodCb.setModel(new DefaultComboBoxModel(HttpMethod.values())
-        );
-
-        inUrlTxt.setFont(new java.awt.Font("Segoe UI", 0, 20)); // NOI18N
-        inUrlTxt.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 8, 1, 1));
-
-        sendButton.setBackground(new java.awt.Color(9, 123, 237));
-        sendButton.setFont(new java.awt.Font("Segoe UI", 1, 18)); // NOI18N
-        sendButton.setForeground(new java.awt.Color(255, 255, 255));
-        sendButton.setText("SEND");
-        sendButton.setFocusPainted(false);
-        sendButton.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                sendButtonActionPerformed(evt);
-            }
-        });
-
-        javax.swing.GroupLayout inUrlPanelLayout = new javax.swing.GroupLayout(inUrlPanel);
-        inUrlPanel.setLayout(inUrlPanelLayout);
-        inUrlPanelLayout.setHorizontalGroup(
-            inUrlPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(inUrlPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(methodCb, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(inUrlTxt, javax.swing.GroupLayout.DEFAULT_SIZE, 435, Short.MAX_VALUE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(sendButton)
-                .addContainerGap())
-        );
-        inUrlPanelLayout.setVerticalGroup(
-            inUrlPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(inUrlPanelLayout.createSequentialGroup()
-                .addGap(5, 5, 5)
-                .addGroup(inUrlPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(methodCb, javax.swing.GroupLayout.DEFAULT_SIZE, 47, Short.MAX_VALUE)
-                    .addComponent(sendButton, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(inUrlTxt, javax.swing.GroupLayout.Alignment.TRAILING))
-                .addContainerGap())
-        );
-
-        inputPanel.add(inUrlPanel, java.awt.BorderLayout.PAGE_START);
-
-        inputExtendPanel.setFont(new java.awt.Font("Segoe UI", 0, 20)); // NOI18N
-        inputExtendPanel.setPreferredSize(new java.awt.Dimension(627, 430));
-
-        inputParamsPanel.setLayout(new java.awt.BorderLayout());
-
-        inParamsTable.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {false, "", ""}
-            },
-            new String [] {
-                "", "Key", "Value"
-            }
-        ) {
-            Class[] types = new Class [] {
-                java.lang.Boolean.class, java.lang.String.class, java.lang.String.class
-            };
-
-            public Class getColumnClass(int columnIndex) {
-                return types [columnIndex];
-            }
-        });
-        inParamsTable.setCellSelectionEnabled(true);
-        inParamsTable.setRowHeight(40);
-        jScrollPane1.setViewportView(inParamsTable);
-
-        inputParamsPanel.add(jScrollPane1, java.awt.BorderLayout.CENTER);
-
-        inputExtendPanel.addTab("Params", inputParamsPanel);
-
-        inputHeadersPanel.setLayout(new java.awt.BorderLayout());
-
-        inHeadersTable.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                { true, "User-Agent", "Postman"},
-                { true, "Accept", "*/*"},
-                { false, "Accept-Encoding", "gzip, deflate, br"},
-                {false, "", ""}
-            },
-            new String [] {
-                "", "Key", "Value"
-            }
-        ) {
-            Class[] types = new Class [] {
-                java.lang.Boolean.class, java.lang.String.class, java.lang.String.class
-            };
-
-            public Class getColumnClass(int columnIndex) {
-                return types [columnIndex];
-            }
-        });
-        inHeadersTable.setCellSelectionEnabled(true);
-        inHeadersTable.setRowHeight(40);
-        jScrollPane3.setViewportView(inHeadersTable);
-
-        inputHeadersPanel.add(jScrollPane3, java.awt.BorderLayout.CENTER);
-
-        inputExtendPanel.addTab("Headers", inputHeadersPanel);
-
-        inputBodyPanel.setLayout(new java.awt.BorderLayout());
-
-        typeBodyPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 18, 5));
-
-        typeBodyInput.add(typeBodyNoneButton);
-        typeBodyNoneButton.setSelected(true);
-        typeBodyNoneButton.setText("none");
-        typeBodyNoneButton.setFocusPainted(false);
-        typeBodyPanel.add(typeBodyNoneButton);
-
-        typeBodyInput.add(typeBodyTextButton);
-        typeBodyTextButton.setText("text");
-        typeBodyTextButton.setFocusPainted(false);
-        typeBodyPanel.add(typeBodyTextButton);
-
-        typeBodyInput.add(typeBodyJsonButton);
-        typeBodyJsonButton.setText("json");
-        typeBodyJsonButton.setFocusPainted(false);
-        typeBodyPanel.add(typeBodyJsonButton);
-
-        typeBodyInput.add(typeBodyBinaryButton);
-        typeBodyBinaryButton.setText("binary");
-        typeBodyPanel.add(typeBodyBinaryButton);
-
-        inputBodyPanel.add(typeBodyPanel, java.awt.BorderLayout.PAGE_START);
-
-        panelInputBody.setLayout(new java.awt.CardLayout());
-
-        javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-        jPanel1.setLayout(jPanel1Layout);
-        jPanel1Layout.setHorizontalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 608, Short.MAX_VALUE)
-        );
-        jPanel1Layout.setVerticalGroup(
-            jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 85, Short.MAX_VALUE)
-        );
-
-        panelInputBody.add(jPanel1, "card2");
-
-        jPanel2.setLayout(new java.awt.BorderLayout());
-
-        inBodyJsonTxt.setColumns(20);
-        inBodyJsonTxt.setRows(5);
-        inBodyJsonTxt.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        jScrollPane5.setViewportView(inBodyJsonTxt);
-
-        jPanel2.add(jScrollPane5, java.awt.BorderLayout.CENTER);
-
-        panelInputBody.add(jPanel2, "card3");
-
-        jPanel4.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        jPanel4.setMinimumSize(new java.awt.Dimension(100, 100));
-        jPanel4.setLayout(new javax.swing.BoxLayout(jPanel4, javax.swing.BoxLayout.PAGE_AXIS));
-
-        chooseInputFileBody.setFont(new java.awt.Font("Segoe UI", 0, 20)); // NOI18N
-        chooseInputFileBody.setText("Select file");
-        chooseInputFileBody.setFocusPainted(false);
-        chooseInputFileBody.setMinimumSize(new java.awt.Dimension(120, 40));
-        chooseInputFileBody.setPreferredSize(new java.awt.Dimension(130, 40));
-        chooseInputFileBody.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                chooseInputFileBodyActionPerformed(evt);
-            }
-        });
-        jPanel4.add(chooseInputFileBody);
-
-        inFileNameTxt.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 1, 1, 1));
-        jPanel4.add(inFileNameTxt);
-
-        panelInputBody.add(jPanel4, "card4");
-
-        jPanel3.setLayout(new java.awt.BorderLayout());
-
-        inBodyText.setColumns(20);
-        inBodyText.setRows(5);
-        inBodyText.setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        jScrollPane7.setViewportView(inBodyText);
-
-        jPanel3.add(jScrollPane7, java.awt.BorderLayout.CENTER);
-
-        panelInputBody.add(jPanel3, "card5");
-
-        inputBodyPanel.add(panelInputBody, java.awt.BorderLayout.CENTER);
-
-        inputExtendPanel.addTab("Body", inputBodyPanel);
-
-        inputPanel.add(inputExtendPanel, java.awt.BorderLayout.CENTER);
-
-        getContentPane().add(inputPanel);
-
-        outputPanel.setMinimumSize(new java.awt.Dimension(107, 500));
-        outputPanel.setPreferredSize(new java.awt.Dimension(693, 500));
-        outputPanel.setLayout(new java.awt.BorderLayout());
-
-        outStatusLabel.setBackground(new java.awt.Color(255, 255, 255));
-        outStatusLabel.setFont(new java.awt.Font("Segoe UI", 0, 20)); // NOI18N
-        outStatusLabel.setForeground(new java.awt.Color(0, 127, 49));
-        outStatusLabel.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 8, 1, 1));
-        outStatusLabel.setOpaque(true);
-
-        javax.swing.GroupLayout outStatusPanelLayout = new javax.swing.GroupLayout(outStatusPanel);
-        outStatusPanel.setLayout(outStatusPanelLayout);
-        outStatusPanelLayout.setHorizontalGroup(
-            outStatusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(outStatusPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(outStatusLabel, javax.swing.GroupLayout.PREFERRED_SIZE, 440, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(162, Short.MAX_VALUE))
-        );
-        outStatusPanelLayout.setVerticalGroup(
-            outStatusPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, outStatusPanelLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(outStatusLabel, javax.swing.GroupLayout.DEFAULT_SIZE, 37, Short.MAX_VALUE)
-                .addContainerGap())
-        );
-
-        outputPanel.add(outStatusPanel, java.awt.BorderLayout.PAGE_START);
-
-        outDetailPanel.setLayout(new java.awt.BorderLayout());
-
-        jTabbedPane1.setFont(new java.awt.Font("Segoe UI", 0, 20)); // NOI18N
-
-        outBodyPanel.setLayout(new java.awt.BorderLayout());
-
-        outBodyTxt.setColumns(20);
-        outBodyTxt.setRows(5);
-        outBodyTxt.setTabSize(4);
-        outBodyTxt.setBorder(javax.swing.BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        jScrollPane4.setViewportView(outBodyTxt);
-
-        outBodyPanel.add(jScrollPane4, java.awt.BorderLayout.CENTER);
-
-        jTabbedPane1.addTab("Body", outBodyPanel);
-
-        jPanel7.setLayout(new javax.swing.BoxLayout(jPanel7, javax.swing.BoxLayout.LINE_AXIS));
-
-        outCookiesTable.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null, null, null, null}
-            },
-            new String [] {
-                "Name", "Value", "Domain", "Path", "Expires", "HttpOnly", "Secure"
-            }
-        ) {
-            Class[] types = new Class [] {
-                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
-            };
-
-            public Class getColumnClass(int columnIndex) {
-                return types [columnIndex];
-            }
-        });
-        outCookiesTable.setCellSelectionEnabled(true);
-        outCookiesTable.setRowHeight(40);
-        jScrollPane6.setViewportView(outCookiesTable);
-
-        jPanel7.add(jScrollPane6);
-
-        jTabbedPane1.addTab("Cookies", jPanel7);
-
-        outHeaderPanel.setLayout(new java.awt.BorderLayout());
-
-        outHeadersTable.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null}
-            },
-            new String [] {
-                "Key", "Value"
-            }
-        ) {
-            Class[] types = new Class [] {
-                java.lang.String.class, java.lang.String.class
-            };
-
-            public Class getColumnClass(int columnIndex) {
-                return types [columnIndex];
-            }
-        });
-        outHeadersTable.setCellSelectionEnabled(true);
-        outHeadersTable.setRowHeight(40);
-        jScrollPane2.setViewportView(outHeadersTable);
-
-        outHeaderPanel.add(jScrollPane2, java.awt.BorderLayout.CENTER);
-
-        jTabbedPane1.addTab("Headers", outHeaderPanel);
-
-        outDetailPanel.add(jTabbedPane1, java.awt.BorderLayout.CENTER);
-
-        outputPanel.add(outDetailPanel, java.awt.BorderLayout.CENTER);
-
-        getContentPane().add(outputPanel);
+        getContentPane().add(mPanelMenuAbove, BorderLayout.PAGE_START);
+        getContentPane().add(splitPane, BorderLayout.CENTER);
 
         pack();
+        setSize(Values.DEFAULT_LAUNCH_SIZE);
         setLocationRelativeTo(null);
-    }// </editor-fold>//GEN-END:initComponents
+    }
 
-    private void sendButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_sendButtonActionPerformed
+    private void setupPanelResponse() {
+        mPanelResponse.setLayout(new BorderLayout());
 
+        setupPanelResponseStatus();
+        mPanelResponse.add(mPanelResponseStatus, BorderLayout.PAGE_START);
+
+        setupPanelResponseDetail();
+        mPanelResponse.add(mPanelResponseDetail, BorderLayout.CENTER);
+    }
+
+    private void setupPanelResponseDetail() {
+        mPanelResponseDetail.setLayout(new BorderLayout());
+
+        mTabbedPaneResponse.setFont(Fonts.GENERAL_PLAIN_12);
+
+        setupPanelResponseBody();
+        mTabbedPaneResponse.addTab("Body", mPanelResponseBody);
+
+        setupPanelResponseCookies();
+        mTabbedPaneResponse.addTab("Cookies", mPanelResponseCookies);
+
+        setupPanelResponseHeaders();
+        mTabbedPaneResponse.addTab("Headers", mPanelResponseHeaders);
+
+        mPanelResponseDetail.add(mTabbedPaneResponse, BorderLayout.CENTER);
+    }
+
+    private void setupPanelResponseHeaders() {
+        mPanelResponseHeaders.setLayout(new BorderLayout());
+
+        mTableResponseHeaders.setModel(new DefaultTableModel(
+                new Object[][]{
+                        {null, null}
+                },
+                new String[]{
+                        "Key", "Value"
+                }
+        ) {
+            Class[] types = new Class[]{
+                    String.class, String.class
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types[columnIndex];
+            }
+        });
+        mTableResponseHeaders.setCellSelectionEnabled(true);
+        mTableResponseHeaders.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
+        scrollPaneResponseHeaders.setViewportView(mTableResponseHeaders);
+
+        mPanelResponseHeaders.add(scrollPaneResponseHeaders, BorderLayout.CENTER);
+    }
+
+    private void setupPanelResponseCookies() {
+        mPanelResponseCookies.setLayout(new BoxLayout(mPanelResponseCookies, BoxLayout.LINE_AXIS));
+
+        mTableResponseCookies.setModel(new DefaultTableModel(
+                new Object[][]{
+                        {null, null, null, null, null, null, null}
+                },
+                new String[]{
+                        "Name", "Value", "Domain", "Path", "Expires", "HttpOnly", "Secure"
+                }
+        ) {
+            Class[] types = new Class[]{
+                    String.class, String.class, String.class, String.class, String.class, String.class, String.class
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types[columnIndex];
+            }
+        });
+        mTableResponseCookies.setCellSelectionEnabled(true);
+        mTableResponseCookies.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
+        scrollPaneResponseCookies.setViewportView(mTableResponseCookies);
+
+        mPanelResponseCookies.add(scrollPaneResponseCookies);
+    }
+
+    private void setupPanelResponseBody() {
+        mPanelResponseBody.setLayout(new BorderLayout());
+
+        mTextAreaResponseBody.setFont(Fonts.GENERAL_PLAIN_12);
+        mTextAreaResponseBody.setTabSize(4);
+        mTextAreaResponseBody.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        scrollPaneResponseBody.setViewportView(mTextAreaResponseBody);
+
+        mPanelResponseBody.add(scrollPaneResponseBody, BorderLayout.CENTER);
+    }
+
+    private void setupPanelResponseStatus() {
+        mLabelResponseStatus.setBackground(Colors.WHITE_COLOR);
+        mLabelResponseStatus.setFont(Fonts.GENERAL_PLAIN_12);
+        mLabelResponseStatus.setForeground(Colors.GREEN_COLOR);
+        mLabelResponseStatus.setBorder(BorderFactory.createEmptyBorder(1, 8, 1, 8));
+        mLabelResponseStatus.setOpaque(true);
+
+        GroupLayout mPanelResponseStatusLayout = new GroupLayout(mPanelResponseStatus);
+        mPanelResponseStatus.setLayout(mPanelResponseStatusLayout);
+        mPanelResponseStatusLayout.setHorizontalGroup(
+                mPanelResponseStatusLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addGroup(mPanelResponseStatusLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(mLabelResponseStatus, GroupLayout.DEFAULT_SIZE, 0, Short.MAX_VALUE)
+                                .addContainerGap())
+        );
+        mPanelResponseStatusLayout.setVerticalGroup(
+                mPanelResponseStatusLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addGroup(GroupLayout.Alignment.TRAILING, mPanelResponseStatusLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(mLabelResponseStatus, GroupLayout.DEFAULT_SIZE, 30, Short.MAX_VALUE)
+                                .addContainerGap())
+        );
+    }
+
+    private void setupPanelRequest() {
+        mPanelRequest.setLayout(new BorderLayout());
+
+        setupPanelRequestUrl();
+        mPanelRequest.add(mPanelRequestUrl, BorderLayout.PAGE_START);
+
+        setupPanelRequestDetail();
+        mPanelRequest.add(mPanelRequestDetail, BorderLayout.CENTER);
+    }
+
+    private void setupPanelRequestDetail() {
+        mPanelRequestDetail.setFont(Fonts.GENERAL_PLAIN_12);
+
+        setupPanelRequestParams();
+        mPanelRequestDetail.addTab("Params", mPanelRequestParams);
+
+        setupPanelRequestHeaders();
+        mPanelRequestDetail.addTab("Headers", mPanelRequestHeaders);
+
+        setupPanelRequestBody();
+        mPanelRequestDetail.addTab("Body", mPanelRequestBody);
+    }
+
+    private void setupPanelRequestBody() {
+        mPanelRequestBody.setLayout(new BorderLayout());
+
+        mPanelRequestBodyType.setLayout(new FlowLayout(FlowLayout.LEFT, 18, 5));
+
+        mButtonGroupRequestBodyType.add(mRadioButtonRequestBodyNone);
+        mRadioButtonRequestBodyNone.setSelected(true);
+        mRadioButtonRequestBodyNone.setText("none");
+        mRadioButtonRequestBodyNone.setFocusPainted(false);
+        mPanelRequestBodyType.add(mRadioButtonRequestBodyNone);
+
+        mButtonGroupRequestBodyType.add(mRadioButtonRequestBodyText);
+        mRadioButtonRequestBodyText.setText("text");
+        mRadioButtonRequestBodyText.setFocusPainted(false);
+        mPanelRequestBodyType.add(mRadioButtonRequestBodyText);
+
+        mButtonGroupRequestBodyType.add(mRadioButtonRequestBodyJson);
+        mRadioButtonRequestBodyJson.setText("json");
+        mRadioButtonRequestBodyJson.setFocusPainted(false);
+        mPanelRequestBodyType.add(mRadioButtonRequestBodyJson);
+
+        mButtonGroupRequestBodyType.add(mRadioButtonBodyBinary);
+        mRadioButtonBodyBinary.setText("binary");
+        mRadioButtonBodyBinary.setFocusPainted(false);
+        mPanelRequestBodyType.add(mRadioButtonBodyBinary);
+
+        mPanelRequestBody.add(mPanelRequestBodyType, BorderLayout.PAGE_START);
+
+        mPanelRequestBodyDetail.setLayout(new CardLayout());
+
+        GroupLayout mPanelRequestBodyNoneLayout = new GroupLayout(mPanelRequestBodyNone);
+        mPanelRequestBodyNone.setLayout(mPanelRequestBodyNoneLayout);
+        mPanelRequestBodyNoneLayout.setHorizontalGroup(
+                mPanelRequestBodyNoneLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addGap(0, 0, Short.MAX_VALUE)
+        );
+        mPanelRequestBodyNoneLayout.setVerticalGroup(
+                mPanelRequestBodyNoneLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addGap(0, 0, Short.MAX_VALUE)
+        );
+
+        mPanelRequestBodyDetail.add(mPanelRequestBodyNone, "none");
+
+        mTextAreaBodyText.setFont(Fonts.GENERAL_PLAIN_12);
+        mTextAreaBodyText.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        scrollPaneRequestBodyText.setViewportView(mTextAreaBodyText);
+        mPanelRequestBodyText.setLayout(new BorderLayout());
+        mPanelRequestBodyText.add(scrollPaneRequestBodyText, BorderLayout.CENTER);
+        mPanelRequestBodyDetail.add(mPanelRequestBodyText, "text");
+
+        mPanelRequestBodyBinary.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        mPanelRequestBodyBinary.setLayout(new BoxLayout(mPanelRequestBodyBinary, BoxLayout.PAGE_AXIS));
+
+        mButtonChooseInputFile.setFont(Fonts.GENERAL_PLAIN_12);
+        mButtonChooseInputFile.setText(Strings.SELECT_FILE);
+        mButtonChooseInputFile.setFocusPainted(false);
+        mButtonChooseInputFile.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                mButtonChooseInputFileActionPerformed(evt);
+            }
+        });
+        mPanelRequestBodyBinary.add(mButtonChooseInputFile);
+
+        mLabelUploadedFile.setBorder(BorderFactory.createEmptyBorder(16, 1, 1, 1));
+        mPanelRequestBodyBinary.add(mLabelUploadedFile);
+
+        mPanelRequestBodyDetail.add(mPanelRequestBodyBinary, "binary");
+
+        mPanelRequestBody.add(mPanelRequestBodyDetail, BorderLayout.CENTER);
+    }
+
+    private void setupPanelRequestHeaders() {
+        mPanelRequestHeaders.setLayout(new BorderLayout());
+
+        mTableRequestHeaders.setModel(new DefaultTableModel(
+                new Object[][]{
+                        {Boolean.TRUE, "User-Agent", "Postman"},
+                        {Boolean.TRUE, "Accept", "*/*"},
+                        {Boolean.TRUE, "Accept-Encoding", "gzip, deflate, br"},
+                        {Boolean.FALSE, "", ""}
+                },
+                new String[]{
+                        "", "Key", "Value"
+                }
+        ) {
+            Class[] types = new Class[]{
+                    Boolean.class, String.class, String.class
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types[columnIndex];
+            }
+        });
+        mTableRequestHeaders.setCellSelectionEnabled(true);
+        mTableRequestHeaders.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
+        scrollPaneRequestHeaders.setViewportView(mTableRequestHeaders);
+
+        mPanelRequestHeaders.add(scrollPaneRequestHeaders, BorderLayout.CENTER);
+    }
+
+    private void setupPanelRequestParams() {
+        mPanelRequestParams.setLayout(new BorderLayout());
+
+        mTableRequestParams.setModel(new DefaultTableModel(
+                new Object[][]{
+                        {false, "", ""}
+                },
+                new String[]{
+                        "", "Key", "Value"
+                }
+        ) {
+            Class[] types = new Class[]{
+                    Boolean.class, String.class, String.class
+            };
+
+            public Class getColumnClass(int columnIndex) {
+                return types[columnIndex];
+            }
+        });
+        mTableRequestParams.setCellSelectionEnabled(true);
+        mTableRequestParams.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
+        scrollPaneRequestParams.setViewportView(mTableRequestParams);
+
+        mPanelRequestParams.add(scrollPaneRequestParams, BorderLayout.CENTER);
+    }
+
+    private void setupPanelRequestUrl() {
+        mComboBoxRequestMethod.setFont(Fonts.GENERAL_BOLD_12);
+        mComboBoxRequestMethod.setModel(new DefaultComboBoxModel(HttpMethod.values()));
+
+        mTextFieldRequestUrl.setFont(Fonts.GENERAL_PLAIN_12);
+        mTextFieldRequestUrl.setBorder(BorderFactory.createEmptyBorder(1, 8, 1, 8));
+
+        mButtonSendRequest.setBackground(Colors.BLUE_COLOR);
+        mButtonSendRequest.setFont(Fonts.GENERAL_BOLD_12);
+        mButtonSendRequest.setForeground(Colors.WHITE_COLOR);
+        mButtonSendRequest.setText(Strings.SEND);
+        mButtonSendRequest.setFocusPainted(false);
+        mButtonSendRequest.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                mButtonSendRequestActionPerformed(evt);
+            }
+        });
+
+        GroupLayout mPanelRequestUrlLayout = new GroupLayout(mPanelRequestUrl);
+        mPanelRequestUrl.setLayout(mPanelRequestUrlLayout);
+        mPanelRequestUrlLayout.setHorizontalGroup(
+                mPanelRequestUrlLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addGroup(mPanelRequestUrlLayout.createSequentialGroup()
+                                .addContainerGap()
+                                .addComponent(mComboBoxRequestMethod, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(mTextFieldRequestUrl, GroupLayout.DEFAULT_SIZE, 0, Short.MAX_VALUE)
+                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(mButtonSendRequest)
+                                .addContainerGap())
+        );
+        mPanelRequestUrlLayout.setVerticalGroup(
+                mPanelRequestUrlLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                        .addGroup(mPanelRequestUrlLayout.createSequentialGroup()
+                                .addGap(8, 8, 8)
+                                .addGroup(mPanelRequestUrlLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                                        .addComponent(mComboBoxRequestMethod, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(mButtonSendRequest, GroupLayout.Alignment.TRAILING, Values.BUTTON_SEND_HEIGHT, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addComponent(mTextFieldRequestUrl, GroupLayout.Alignment.TRAILING))
+                                .addContainerGap())
+        );
+    }
+
+    private void setupMenuAbove() {
+        mPanelMenuAbove.setLayout(new FlowLayout(FlowLayout.RIGHT, 4, 4));
+
+        mButtonNewRequest.setFont(Fonts.GENERAL_PLAIN_12);
+        mButtonNewRequest.setText(Strings.NEW);
+        mButtonNewRequest.setFocusPainted(false);
+        mButtonNewRequest.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                mButtonNewRequestActionPerformed(evt);
+            }
+        });
+        mPanelMenuAbove.add(mButtonNewRequest);
+
+        mButtonImportRequest.setFont(Fonts.GENERAL_PLAIN_12);
+        mButtonImportRequest.setText(Strings.IMPORT);
+        mButtonImportRequest.setFocusPainted(false);
+        mButtonImportRequest.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                mButtonImportRequestActionPerformed(evt);
+            }
+        });
+        mPanelMenuAbove.add(mButtonImportRequest);
+
+        mButtonExportRequest.setFont(Fonts.GENERAL_PLAIN_12);
+        mButtonExportRequest.setText(Strings.EXPORT);
+        mButtonExportRequest.setFocusPainted(false);
+        mButtonExportRequest.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+                mButtonExportRequestActionPerformed(evt);
+            }
+        });
+        mPanelMenuAbove.add(mButtonExportRequest);
+    }
+
+    private void mButtonSendRequestActionPerformed(java.awt.event.ActionEvent evt) {
         resetOutput();
 
         HttpRequest httpRequest = createRequest();
@@ -656,94 +636,89 @@ public class PostmanView extends javax.swing.JFrame {
 
             String contentEncoding = Optional
                     .ofNullable(httpResponse.getHeader("Content-Encoding"))
-                    .orElse(Arrays.asList("")).get(0);
+                    .orElse(List.of("")).get(0);
 
             switch (contentEncoding.toLowerCase()) {
-                case "gzip":
-                    outBodyTxt.setText(Decompress.decompressGzip(httpResponse.getBody(), charset));
-                    break;
-                case "deflate":
-                    outBodyTxt.setText(Decompress.decompressDeflate(httpResponse.getBody(), charset));
-                    break;
-                case "br":
-                    outBodyTxt.setText(Decompress.decompressBrotli(httpResponse.getBody(), charset));
-                    break;
-                default:
-                    outBodyTxt.setText(new String(httpResponse.getBody(), charset));
+                case "gzip" ->
+                        mTextAreaResponseBody.setText(Decompress.decompressGzip(httpResponse.getBody(), charset));
+                case "deflate" ->
+                        mTextAreaResponseBody.setText(Decompress.decompressDeflate(httpResponse.getBody(), charset));
+                case "br" ->
+                        mTextAreaResponseBody.setText(Decompress.decompressBrotli(httpResponse.getBody(), charset));
+                default -> mTextAreaResponseBody.setText(new String(httpResponse.getBody(), charset));
             }
 
-            outBodyTxt.setCaretPosition(0);
-            outStatusLabel.setText(httpResponse.getStatusCode() + " " + httpResponse.getStatusMessage());
+            mTextAreaResponseBody.setCaretPosition(0);
+            mLabelResponseStatus.setText(httpResponse.getStatusCode() + " " + httpResponse.getStatusMessage());
 
             if (httpResponse.getHeader("Content-Type").get(0).equals("image/png")) {
                 FileNameExtensionFilter filter = new FileNameExtensionFilter("png", "PNG");
-                fileChooser.setFileFilter(filter);
-                fileChooser.setSelectedFile(new File(""));
-                int x = fileChooser.showSaveDialog(this);
+                mFileChoose.setFileFilter(filter);
+                mFileChoose.setSelectedFile(new File(""));
+                int x = mFileChoose.showSaveDialog(this);
 
                 if (x == JFileChooser.APPROVE_OPTION) {
-                    String direct = fileChooser.getSelectedFile().toString();
+                    String direct = mFileChoose.getSelectedFile().toString();
                     if (!direct.endsWith(".png")) {
                         direct += ".png";
                     }
                     File file = new File(direct);
-                    try ( FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+                    try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
                         fileOutputStream.write(httpResponse.getBody());
                     }
                 }
             }
 
-            DefaultTableModel model = (DefaultTableModel) outHeadersTable.getModel();
+            DefaultTableModel model = (DefaultTableModel) mTableResponseHeaders.getModel();
             model.setRowCount(0);
             for (Map.Entry<String, List<String>> entry : httpResponse.getHeaders().entrySet()) {
                 for (String value : entry.getValue()) {
                     model.addRow(new Object[]{entry.getKey(), value});
                 }
             }
-            outHeadersTable.setModel(model);
+            mTableResponseHeaders.setModel(model);
 
-            DefaultTableModel modelCookieTable = (DefaultTableModel) outCookiesTable.getModel();
+            DefaultTableModel modelCookieTable = (DefaultTableModel) mTableResponseCookies.getModel();
             modelCookieTable.setRowCount(0);
             for (Cookie cookie : httpResponse.getCookies()) {
                 modelCookieTable.addRow(
                         new Object[]{
-                            cookie.getKey(),
-                            cookie.getValue(),
-                            cookie.getDomain(),
-                            cookie.getPath(),
-                            cookie.getExpires(),
-                            cookie.isHttp(),
-                            cookie.isSecure()
+                                cookie.getKey(),
+                                cookie.getValue(),
+                                cookie.getDomain(),
+                                cookie.getPath(),
+                                cookie.getExpires(),
+                                cookie.isHttp(),
+                                cookie.isSecure()
                         }
                 );
             }
-            outCookiesTable.setModel(modelCookieTable);
+            mTableResponseCookies.setModel(modelCookieTable);
 
         } catch (HeadlessException | IOException | URLFormatException | DecompressException | DataFormatException ex) {
             Logger.getLogger(PostmanView.class.getName()).log(Level.SEVERE, null, ex);
-            outStatusLabel.setText(ex.getClass().getSimpleName());
-            outBodyTxt.setText(ex.getMessage());
+            mLabelResponseStatus.setText(ex.getClass().getSimpleName());
+            mTextAreaResponseBody.setText(ex.getMessage());
         }
 
-    }//GEN-LAST:event_sendButtonActionPerformed
+    }
 
     private HttpRequest createRequest() {
         HttpRequest httpRequest = new HttpRequest();
-        httpRequest.setMethod((HttpMethod) methodCb.getSelectedItem());
-        httpRequest.setUrl(Optional.ofNullable(inUrlTxt.getText().trim()).orElse(""));
-        if (!typeBodyNoneButton.isSelected()) {
-            httpRequest.setBody(Optional.ofNullable(inBodyJsonTxt.getText().trim()).orElse(""));
-            httpRequest.addHeader("Content-Length", String.valueOf(httpRequest.getBody().length()));
+        httpRequest.setMethod((HttpMethod) mComboBoxRequestMethod.getSelectedItem());
+        httpRequest.setUrl(Optional.ofNullable(mTextFieldRequestUrl.getText()).orElse(""));
+        if (!mRadioButtonRequestBodyNone.isSelected()) {
+            httpRequest.setBody(Optional.ofNullable(mTextAreaBodyText.getText()).orElse("").getBytes());
+            httpRequest.addHeader("Content-Length", String.valueOf(httpRequest.getBody().length));
         }
 
-        if (typeBodyBinaryButton.isSelected()) {
-            httpRequest.setBody(inFileNameTxt.getText());
-            File file = new File(inFileNameTxt.getText());
+        if (mRadioButtonBodyBinary.isSelected()) {
+            httpRequest.setBody(mLabelUploadedFile.getText().getBytes());
+            File file = new File(mLabelUploadedFile.getText());
             httpRequest.addHeader("Content-Length", String.valueOf(file.length()));
-            httpRequest.setSendingFile(true);
         }
 
-        DefaultTableModel modelHeaders = (DefaultTableModel) inHeadersTable.getModel();
+        DefaultTableModel modelHeaders = (DefaultTableModel) mTableRequestHeaders.getModel();
         for (int i = 0; i < modelHeaders.getRowCount(); i++) {
             String key = Optional.ofNullable(modelHeaders.getValueAt(i, 1)).orElse("").toString();
             String value = Optional.ofNullable(modelHeaders.getValueAt(i, 2)).orElse("").toString();
@@ -757,76 +732,74 @@ public class PostmanView extends javax.swing.JFrame {
     }
 
     private void resetOutput() {
-        outStatusLabel.setText("");
-        outBodyTxt.setText("");
-        DefaultTableModel model = (DefaultTableModel) outCookiesTable.getModel();
+        mLabelResponseStatus.setText("");
+        mTextAreaResponseBody.setText("");
+        DefaultTableModel model = (DefaultTableModel) mTableResponseCookies.getModel();
         model.setRowCount(0);
-        outCookiesTable.setModel(model);
+        mTableResponseCookies.setModel(model);
 
-        model = (DefaultTableModel) outHeadersTable.getModel();
+        model = (DefaultTableModel) mTableResponseHeaders.getModel();
         model.setRowCount(0);
-        outHeadersTable.setModel(model);
+        mTableResponseHeaders.setModel(model);
     }
 
     private void resetInput() {
-        methodCb.setSelectedIndex(0);
+        mComboBoxRequestMethod.setSelectedIndex(0);
 
-        inUrlTxt.setText("");
+        mTextFieldRequestUrl.setText("");
 
-        DefaultTableModel model = (DefaultTableModel) inParamsTable.getModel();
+        DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
         model.setRowCount(0);
         model.addRow(new Object[]{false, "", ""});
-        inParamsTable.setModel(model);
+        mTableRequestParams.setModel(model);
 
-        model = (DefaultTableModel) inHeadersTable.getModel();
+        model = (DefaultTableModel) mTableRequestHeaders.getModel();
         model.setRowCount(0);
         model.addRow(new Object[]{true, "User-Agent", "Postman"});
         model.addRow(new Object[]{true, "Accept", "*/*"});
         model.addRow(new Object[]{false, "Accept-Encoding", "gzip, deflate, br"});
         model.addRow(new Object[]{false, "", ""});
-        inHeadersTable.setModel(model);
+        mTableRequestHeaders.setModel(model);
 
-        inBodyJsonTxt.setText("");
-        typeBodyNoneButton.doClick();
+        mRadioButtonRequestBodyNone.doClick();
     }
 
-    private void subNewActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_subNewActionPerformed
+    private void mButtonNewRequestActionPerformed(java.awt.event.ActionEvent evt) {
         resetInput();
         resetOutput();
-    }//GEN-LAST:event_subNewActionPerformed
+        mTextFieldRequestUrl.requestFocus();
+    }
 
-    private void subImportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_subImportActionPerformed
+    private void mButtonImportRequestActionPerformed(java.awt.event.ActionEvent evt) {
         FileNameExtensionFilter filter = new FileNameExtensionFilter("req", "req");
-        fileChooser.setFileFilter(filter);
-        fileChooser.setSelectedFile(new File(""));
-        int x = fileChooser.showOpenDialog(null);
+        mFileChoose.setFileFilter(filter);
+        mFileChoose.setSelectedFile(new File(""));
+        int x = mFileChoose.showOpenDialog(null);
         if (x == JFileChooser.APPROVE_OPTION) {
-            String direct = fileChooser.getSelectedFile().toString();
-            System.out.println(direct);
-            Storage storage = new Storage();
-            HttpRequestStorage httpRequestStorage = storage.importPostman(direct);
+            String direct = mFileChoose.getSelectedFile().toString();
+            HttpRequestStorage httpRequestStorage = Storage.importRequest(direct);
 
-            methodCb.setSelectedItem(httpRequestStorage.getMethod());
+            mComboBoxRequestMethod.setSelectedItem(httpRequestStorage.getMethod());
 
-            inUrlTxt.setText(httpRequestStorage.getUrl());
+            mTextFieldRequestUrl.setText(httpRequestStorage.getUrl());
 
-            DefaultTableModel model = (DefaultTableModel) inParamsTable.getModel();
+            DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
             model.setRowCount(0);
             for (Object[] i : httpRequestStorage.getParams()) {
                 model.addRow(i);
             }
-            inParamsTable.setModel(model);
+            mTableRequestParams.setModel(model);
 
-            model = (DefaultTableModel) inHeadersTable.getModel();
+            model = (DefaultTableModel) mTableRequestHeaders.getModel();
             model.setRowCount(0);
             for (Object[] i : httpRequestStorage.getHeaders()) {
                 model.addRow(i);
             }
-            inHeadersTable.setModel(model);
+            mTableRequestHeaders.setModel(model);
 
-            inBodyJsonTxt.setText(httpRequestStorage.getBody());
+            mTextAreaBodyText.setText(httpRequestStorage.getBody());
 
-            List<AbstractButton> listButton = Collections.list(typeBodyInput.getElements());
+            List<AbstractButton> listButton = Collections.list(mButtonGroupRequestBodyType.getElements());
 
             for (AbstractButton button : listButton) {
                 if (button.getText().equals(httpRequestStorage.getTypeBody())) {
@@ -834,28 +807,27 @@ public class PostmanView extends javax.swing.JFrame {
                 }
             }
 
-            inFileNameTxt.setText(httpRequestStorage.getFileName());
+            mLabelUploadedFile.setText(httpRequestStorage.getFileName());
         }
+    }
 
-    }//GEN-LAST:event_subImportActionPerformed
-
-    private void subExportActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_subExportActionPerformed
+    private void mButtonExportRequestActionPerformed(java.awt.event.ActionEvent evt) {
         FileNameExtensionFilter filter = new FileNameExtensionFilter("req", "req");
-        fileChooser.setFileFilter(filter);
-        fileChooser.setSelectedFile(new File(""));
-        int x = fileChooser.showSaveDialog(null);
+        mFileChoose.setFileFilter(filter);
+        mFileChoose.setSelectedFile(new File(""));
+        int x = mFileChoose.showSaveDialog(null);
         if (x == JFileChooser.APPROVE_OPTION) {
-            String direct = fileChooser.getSelectedFile().toString();
+            String direct = mFileChoose.getSelectedFile().toString();
             if (!direct.endsWith(".req")) {
                 direct += ".req";
             }
             HttpRequestStorage httpRequestStorage = new HttpRequestStorage();
-            httpRequestStorage.setMethod((HttpMethod) methodCb.getSelectedItem());
-            httpRequestStorage.setUrl(Optional.ofNullable(inUrlTxt.getText().trim()).orElse(""));
+            httpRequestStorage.setMethod((HttpMethod) mComboBoxRequestMethod.getSelectedItem());
+            httpRequestStorage.setUrl(Optional.ofNullable(mTextFieldRequestUrl.getText()).orElse(""));
 
-            httpRequestStorage.setBody(inBodyJsonTxt.getText());
+            httpRequestStorage.setBody(mTextAreaBodyText.getText());
 
-            DefaultTableModel model = (DefaultTableModel) inParamsTable.getModel();
+            DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
             for (int i = 0; i < model.getRowCount(); i++) {
                 String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
                 String value = Optional.ofNullable(model.getValueAt(i, 2)).orElse("").toString();
@@ -863,7 +835,7 @@ public class PostmanView extends javax.swing.JFrame {
                 httpRequestStorage.addParam(new Object[]{check, key, value});
             }
 
-            model = (DefaultTableModel) inHeadersTable.getModel();
+            model = (DefaultTableModel) mTableRequestHeaders.getModel();
             for (int i = 0; i < model.getRowCount(); i++) {
                 String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
                 String value = Optional.ofNullable(model.getValueAt(i, 2)).orElse("").toString();
@@ -871,7 +843,7 @@ public class PostmanView extends javax.swing.JFrame {
                 httpRequestStorage.addHeader(new Object[]{check, key, value});
             }
 
-            List<AbstractButton> listButton = Collections.list(typeBodyInput.getElements());
+            List<AbstractButton> listButton = Collections.list(mButtonGroupRequestBodyType.getElements());
 
             for (AbstractButton button : listButton) {
                 if (button.isSelected()) {
@@ -879,21 +851,19 @@ public class PostmanView extends javax.swing.JFrame {
                 }
             }
 
-            httpRequestStorage.setFileName(Optional.ofNullable(inFileNameTxt.getText()).orElse(""));
+            httpRequestStorage.setFileName(Optional.ofNullable(mLabelUploadedFile.getText()).orElse(""));
 
-            Storage storage = new Storage();
-            storage.export(httpRequestStorage, direct);
+            Storage.exportRequest(httpRequestStorage, direct);
         }
+    }
 
-    }//GEN-LAST:event_subExportActionPerformed
-
-    private void chooseInputFileBodyActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chooseInputFileBodyActionPerformed
-        int x = fileChooser.showOpenDialog(this);
+    private void mButtonChooseInputFileActionPerformed(java.awt.event.ActionEvent evt) {
+        int x = mFileChoose.showOpenDialog(this);
         if (x == JFileChooser.APPROVE_OPTION) {
-            String direction = fileChooser.getSelectedFile().toString();
-            inFileNameTxt.setText(direction);
+            String direction = mFileChoose.getSelectedFile().toString();
+            mLabelUploadedFile.setText(direction);
             String contentType = URLConnection.guessContentTypeFromName(new File(direction).getName());
-            DefaultTableModel model = (DefaultTableModel) inHeadersTable.getModel();
+            DefaultTableModel model = (DefaultTableModel) mTableRequestHeaders.getModel();
             boolean check = true;
             for (int i = 0; i < model.getRowCount(); i++) {
                 if (model.getValueAt(i, 1).equals("Content-Type")) {
@@ -906,94 +876,54 @@ public class PostmanView extends javax.swing.JFrame {
                 model.addRow(new Object[]{true, "Content-Type", contentType});
                 model.addRow(new Object[]{false, "", ""});
             }
-            inHeadersTable.setModel(model);
+            mTableRequestHeaders.setModel(model);
         }
-    }//GEN-LAST:event_chooseInputFileBodyActionPerformed
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(PostmanView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(PostmanView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(PostmanView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(PostmanView.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                new PostmanView().setVisible(true);
-            }
-        });
     }
 
-    // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton chooseInputFileBody;
-    private javax.swing.JFileChooser fileChooser;
-    private javax.swing.JPanel headerPanel;
-    private javax.swing.JTextArea inBodyJsonTxt;
-    private javax.swing.JTextArea inBodyText;
-    private javax.swing.JLabel inFileNameTxt;
-    private javax.swing.JTable inHeadersTable;
-    private javax.swing.JTable inParamsTable;
-    private javax.swing.JPanel inUrlPanel;
-    private javax.swing.JTextField inUrlTxt;
-    private javax.swing.JPanel inputBodyPanel;
-    private javax.swing.JTabbedPane inputExtendPanel;
-    private javax.swing.JPanel inputHeadersPanel;
-    private javax.swing.JPanel inputPanel;
-    private javax.swing.JPanel inputParamsPanel;
-    private javax.swing.JPanel jPanel1;
-    private javax.swing.JPanel jPanel2;
-    private javax.swing.JPanel jPanel3;
-    private javax.swing.JPanel jPanel4;
-    private javax.swing.JPanel jPanel7;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JScrollPane jScrollPane2;
-    private javax.swing.JScrollPane jScrollPane3;
-    private javax.swing.JScrollPane jScrollPane4;
-    private javax.swing.JScrollPane jScrollPane5;
-    private javax.swing.JScrollPane jScrollPane6;
-    private javax.swing.JScrollPane jScrollPane7;
-    private javax.swing.JTabbedPane jTabbedPane1;
-    private javax.swing.JComboBox<String> methodCb;
-    private javax.swing.JPanel outBodyPanel;
-    private javax.swing.JTextArea outBodyTxt;
-    private javax.swing.JTable outCookiesTable;
-    private javax.swing.JPanel outDetailPanel;
-    private javax.swing.JPanel outHeaderPanel;
-    private javax.swing.JTable outHeadersTable;
-    private javax.swing.JLabel outStatusLabel;
-    private javax.swing.JPanel outStatusPanel;
-    private javax.swing.JPanel outputPanel;
-    private javax.swing.JPanel panelInputBody;
-    private javax.swing.JButton sendButton;
-    private javax.swing.JButton subExport;
-    private javax.swing.JButton subImport;
-    private javax.swing.JButton subNew;
-    private javax.swing.JRadioButton typeBodyBinaryButton;
-    private javax.swing.ButtonGroup typeBodyInput;
-    private javax.swing.JRadioButton typeBodyJsonButton;
-    private javax.swing.JRadioButton typeBodyNoneButton;
-    private javax.swing.JPanel typeBodyPanel;
-    private javax.swing.JRadioButton typeBodyTextButton;
-    // End of variables declaration//GEN-END:variables
+    private JButton mButtonChooseInputFile;
+    private JFileChooser mFileChoose;
+    private JPanel mPanelMenuAbove;
+    private JTextArea mTextAreaBodyText;
+    private JLabel mLabelUploadedFile;
+    private JTable mTableRequestHeaders;
+    private JTable mTableRequestParams;
+    private JPanel mPanelRequestUrl;
+    private JTextField mTextFieldRequestUrl;
+    private JPanel mPanelRequestBody;
+    private JTabbedPane mPanelRequestDetail;
+    private JPanel mPanelRequestHeaders;
+    private JPanel mPanelRequest;
+    private JPanel mPanelRequestParams;
+    private JPanel mPanelRequestBodyNone;
+    private JPanel mPanelRequestBodyText;
+    private JPanel mPanelRequestBodyBinary;
+    private JPanel mPanelResponseCookies;
+    private JScrollPane scrollPaneRequestParams;
+    private JScrollPane scrollPaneResponseHeaders;
+    private JScrollPane scrollPaneRequestHeaders;
+    private JScrollPane scrollPaneResponseBody;
+    private JScrollPane scrollPaneResponseCookies;
+    private JScrollPane scrollPaneRequestBodyText;
+    private JTabbedPane mTabbedPaneResponse;
+    private JComboBox<String> mComboBoxRequestMethod;
+    private JPanel mPanelResponseBody;
+    private JTextArea mTextAreaResponseBody;
+    private JTable mTableResponseCookies;
+    private JPanel mPanelResponseDetail;
+    private JPanel mPanelResponseHeaders;
+    private JTable mTableResponseHeaders;
+    private JLabel mLabelResponseStatus;
+    private JPanel mPanelResponseStatus;
+    private JPanel mPanelResponse;
+    private JPanel mPanelRequestBodyDetail;
+    private JButton mButtonSendRequest;
+    private JButton mButtonExportRequest;
+    private JButton mButtonImportRequest;
+    private JButton mButtonNewRequest;
+    private JRadioButton mRadioButtonBodyBinary;
+    private ButtonGroup mButtonGroupRequestBodyType;
+    private JRadioButton mRadioButtonRequestBodyJson;
+    private JRadioButton mRadioButtonRequestBodyNone;
+    private JPanel mPanelRequestBodyType;
+    private JRadioButton mRadioButtonRequestBodyText;
 }

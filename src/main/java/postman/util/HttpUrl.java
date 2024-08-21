@@ -1,24 +1,22 @@
 package postman.util;
 
+import postman.exception.URLFormatException;
+
 import java.io.Serializable;
-import static java.lang.Integer.parseInt;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
-import postman.exception.URLFormatException;
 
 public class HttpUrl implements Serializable {
 
-    public HttpUrl() {
-    }
-
     public static Map<String, String> extractParams(String url) {
         Map<String, String> params = new LinkedHashMap<>();
-        Optional.ofNullable(url).ifPresent((__url) -> {
+        Optional.ofNullable(url).ifPresent(mUrl -> {
             if (url.contains("?")) {
-                String tmp[] = url.substring(url.indexOf("?") + 1).split("&");
+                String[] tmp = url.substring(url.indexOf("?") + 1).split("&");
                 for (String p : tmp) {
-                    String key = p, value = "";
+                    String key = p;
+                    String value = "";
                     if (p.contains("=")) {
                         key = p.substring(0, p.indexOf("="));
                         value = p.substring(p.indexOf("=") + 1);
@@ -46,7 +44,6 @@ public class HttpUrl implements Serializable {
     }
 
     public static int extractPort(String url) throws URLFormatException {
-        // Mặc định là cổng 80 cho HTTP và 443 cho HTTPS
         int port = url.startsWith("https") ? 443 : 80;
 
         if (url.startsWith("http://")) {
@@ -77,9 +74,8 @@ public class HttpUrl implements Serializable {
                 return url.substring(startIndex);
             }
         } catch (StringIndexOutOfBoundsException e) {
-            throw new StringIndexOutOfBoundsException("Url not have path"); // Ném ngoại lệ cho phần khác của ứng dụng xử lý
+            throw new StringIndexOutOfBoundsException("Url not have path");
         }
         return "/";
     }
-
 }

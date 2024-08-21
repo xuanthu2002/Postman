@@ -57,7 +57,7 @@ public class HttpRequestStorage implements Serializable {
     public void setHeaders(List<Object[]> headers) {
         this.headers = headers;
     }
-    
+
     public void addHeader(Object[] header) {
         this.headers.add(header);
     }
@@ -69,7 +69,7 @@ public class HttpRequestStorage implements Serializable {
     public void setParams(List<Object[]> params) {
         this.params = params;
     }
-    
+
     public void addParam(Object[] param) {
         this.params.add(param);
     }

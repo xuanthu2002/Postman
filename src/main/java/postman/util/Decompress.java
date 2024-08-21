@@ -1,17 +1,14 @@
-package postman.service;
+package postman.util;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import org.brotli.dec.BrotliInputStream;
+import postman.exception.DecompressException;
+
+import java.io.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
-import org.brotli.dec.BrotliInputStream;
-import postman.exception.DecompressException;
 
 public class Decompress {
 
@@ -23,7 +20,6 @@ public class Decompress {
             gzipInputStream = new GZIPInputStream(byteInputStream);
             InputStreamReader inputStreamReader = new InputStreamReader(gzipInputStream, charset);
             BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-            // Đọc và in ra phản hồi đã giải mã
             String decompressedLine;
             while ((decompressedLine = bufferedReader.readLine()) != null) {
                 result.append(decompressedLine).append("\r\n");

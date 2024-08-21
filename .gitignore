@@ -44,6 +44,8 @@ out/
 *.iml
 *.ipr
 *.iws
+META-INF/
+manifest.mf
 
 ##############################
 ## Eclipse
