@@ -98,7 +98,7 @@ public class PostmanView extends javax.swing.JFrame {
     }
 
     private void configureRequestBodyActions() {
-        mRadioButtonRequestBodyNone.addActionListener((ActionEvent e) -> showRequestBodyPanel("none"));
+        mRadioButtonRequestBodyNone.addActionListener((ActionEvent e) -> configureRequestBodyType("none", "none"));
         mRadioButtonRequestBodyText.addActionListener((ActionEvent e) -> configureRequestBodyType("text/plain", "text"));
         mRadioButtonRequestBodyJson.addActionListener((ActionEvent e) -> configureRequestBodyType("application/json", "text"));
         mRadioButtonBodyBinary.addActionListener((ActionEvent e) -> configureRequestBodyType("application/octet-stream", "binary"));
@@ -164,20 +164,32 @@ public class PostmanView extends javax.swing.JFrame {
     private void configureRequestBodyType(String contentType, String panelName) {
         showRequestBodyPanel(panelName);
         DefaultTableModel model = (DefaultTableModel) mTableRequestHeaders.getModel();
-        boolean found = false;
-        for (int i = 0; i < model.getRowCount(); i++) {
-            String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
-            if (key.equals("Content-Type")) {
-                model.setValueAt(contentType, i, 2);
-                found = true;
-                break;
+
+        if (contentType.equalsIgnoreCase("none")) {
+            for (int i = 0; i < model.getRowCount(); i++) {
+                String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
+                if (key.equals("Content-Type")) {
+                    model.removeRow(i);
+                    break;
+                }
+            }
+        } else {
+            boolean found = false;
+            for (int i = 0; i < model.getRowCount(); i++) {
+                String key = Optional.ofNullable(model.getValueAt(i, 1)).orElse("").toString();
+                if (key.equals("Content-Type")) {
+                    model.setValueAt(contentType, i, 2);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                model.removeRow(model.getRowCount() - 1);
+                model.addRow(new Object[]{true, "Content-Type", contentType});
+                model.addRow(new Object[]{false, "", ""});
             }
         }
-        if (!found) {
-            model.removeRow(model.getRowCount() - 1);
-            model.addRow(new Object[]{true, "Content-Type", contentType});
-            model.addRow(new Object[]{false, "", ""});
-        }
+
         mTableRequestHeaders.setModel(model);
     }
 
