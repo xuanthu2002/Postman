@@ -1,9 +1,12 @@
 package postman.gui;
 
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import postman.exception.DecompressException;
 import postman.exception.URLFormatException;
+import postman.gui.components.ScrollPaneEditor;
+import postman.gui.components.TextEditor;
 import postman.gui.constants.Colors;
 import postman.gui.constants.Fonts;
 import postman.gui.constants.Strings;
@@ -25,6 +28,9 @@ import java.net.URLConnection;
 import java.util.List;
 import java.util.*;
 import java.util.zip.DataFormatException;
+
+import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
+import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS;
 
 public class PostmanView extends javax.swing.JFrame {
 
@@ -55,7 +61,7 @@ public class PostmanView extends javax.swing.JFrame {
         initializeRequestUIComponents();
     }
 
-    public static void main(String args[]) {
+    public static void main(String... args) {
         new PostmanView().setVisible(true);
     }
 
@@ -102,7 +108,7 @@ public class PostmanView extends javax.swing.JFrame {
     private void configureRequestBodyActions() {
         mRadioButtonRequestBodyNone.addActionListener((ActionEvent e) -> configureRequestBodyType("none", "none"));
         mRadioButtonRequestBodyText.addActionListener((ActionEvent e) -> configureRequestBodyType("text/plain", "text"));
-        mRadioButtonRequestBodyJson.addActionListener((ActionEvent e) -> configureRequestBodyType("application/json", "text"));
+        mRadioButtonRequestBodyJson.addActionListener((ActionEvent e) -> configureRequestBodyType("application/json", "json"));
         mRadioButtonBodyBinary.addActionListener((ActionEvent e) -> configureRequestBodyType("application/octet-stream", "binary"));
     }
 
@@ -227,47 +233,59 @@ public class PostmanView extends javax.swing.JFrame {
         mButtonNewRequest = new javax.swing.JButton();
         mButtonImportRequest = new javax.swing.JButton();
         mButtonExportRequest = new javax.swing.JButton();
+
         mPanelRequest = new javax.swing.JPanel();
         mPanelRequestUrl = new javax.swing.JPanel();
         mComboBoxRequestMethod = new javax.swing.JComboBox<>();
         mTextFieldRequestUrl = new javax.swing.JTextField();
         mButtonSendRequest = new javax.swing.JButton();
+
         mPanelRequestDetail = new javax.swing.JTabbedPane();
         mPanelRequestParams = new javax.swing.JPanel();
-        scrollPaneRequestParams = new javax.swing.JScrollPane();
         mTableRequestParams = new javax.swing.JTable();
+        mScrollPaneRequestParams = new javax.swing.JScrollPane(mTableRequestParams, VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_AS_NEEDED);
         mPanelRequestHeaders = new javax.swing.JPanel();
-        scrollPaneRequestHeaders = new javax.swing.JScrollPane();
         mTableRequestHeaders = new javax.swing.JTable();
+        mScrollPaneRequestHeaders = new javax.swing.JScrollPane(mTableRequestHeaders, VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
         mPanelRequestBody = new javax.swing.JPanel();
         mPanelRequestBodyType = new javax.swing.JPanel();
         mRadioButtonRequestBodyNone = new javax.swing.JRadioButton();
         mRadioButtonRequestBodyText = new javax.swing.JRadioButton();
         mRadioButtonRequestBodyJson = new javax.swing.JRadioButton();
         mRadioButtonBodyBinary = new javax.swing.JRadioButton();
+
         mPanelRequestBodyDetail = new javax.swing.JPanel();
         mPanelRequestBodyNone = new javax.swing.JPanel();
         mPanelRequestBodyText = new javax.swing.JPanel();
+        mPanelRequestBodyJson = new javax.swing.JPanel();
         mPanelRequestBodyBinary = new javax.swing.JPanel();
+
         mButtonChooseInputFile = new javax.swing.JButton();
         mLabelUploadedFile = new javax.swing.JLabel();
-        mPanelRequestBodyText = new javax.swing.JPanel();
-        scrollPaneRequestBodyText = new javax.swing.JScrollPane();
-        mTextAreaBodyText = new javax.swing.JTextArea();
+        mTextAreaRequestBodyText = new TextEditor();
+        mTextAreaRequestBodyJson = new TextEditor();
+        mScrollPaneRequestBodyText = new ScrollPaneEditor(mTextAreaRequestBodyText);
+        mScrollPaneRequestBodyJson = new ScrollPaneEditor(mTextAreaRequestBodyJson);
+
         mPanelResponse = new javax.swing.JPanel();
         mPanelResponseStatus = new javax.swing.JPanel();
         mLabelResponseStatus = new javax.swing.JLabel();
         mPanelResponseDetail = new javax.swing.JPanel();
         mTabbedPaneResponse = new javax.swing.JTabbedPane();
+
         mPanelResponseBody = new javax.swing.JPanel();
-        scrollPaneResponseBody = new javax.swing.JScrollPane();
-        mTextAreaResponseBody = new javax.swing.JTextArea();
+        mTextAreaResponseBody = new TextEditor();
+        mScrollPaneResponseBody = new ScrollPaneEditor(mTextAreaResponseBody);
+
         mPanelResponseCookies = new javax.swing.JPanel();
-        scrollPaneResponseCookies = new javax.swing.JScrollPane();
         mTableResponseCookies = new javax.swing.JTable();
+        mScrollPaneResponseCookies = new javax.swing.JScrollPane(mTableResponseCookies, VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
         mPanelResponseHeaders = new javax.swing.JPanel();
-        scrollPaneResponseHeaders = new javax.swing.JScrollPane();
         mTableResponseHeaders = new javax.swing.JTable();
+        mScrollPaneResponseHeaders = new javax.swing.JScrollPane(mTableResponseHeaders, VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
 
         setTitle(Strings.APP_NAME);
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -340,9 +358,8 @@ public class PostmanView extends javax.swing.JFrame {
         });
         mTableResponseHeaders.setCellSelectionEnabled(true);
         mTableResponseHeaders.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
-        scrollPaneResponseHeaders.setViewportView(mTableResponseHeaders);
 
-        mPanelResponseHeaders.add(scrollPaneResponseHeaders, BorderLayout.CENTER);
+        mPanelResponseHeaders.add(mScrollPaneResponseHeaders, BorderLayout.CENTER);
     }
 
     private void setupPanelResponseCookies() {
@@ -366,20 +383,15 @@ public class PostmanView extends javax.swing.JFrame {
         });
         mTableResponseCookies.setCellSelectionEnabled(true);
         mTableResponseCookies.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
-        scrollPaneResponseCookies.setViewportView(mTableResponseCookies);
 
-        mPanelResponseCookies.add(scrollPaneResponseCookies);
+        mPanelResponseCookies.add(mScrollPaneResponseCookies);
     }
 
     private void setupPanelResponseBody() {
         mPanelResponseBody.setLayout(new BorderLayout());
-
-        mTextAreaResponseBody.setFont(Fonts.GENERAL_PLAIN_12);
-        mTextAreaResponseBody.setTabSize(4);
+        mTextAreaResponseBody.setHighlightCurrentLine(false);
         mTextAreaResponseBody.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        scrollPaneResponseBody.setViewportView(mTextAreaResponseBody);
-
-        mPanelResponseBody.add(scrollPaneResponseBody, BorderLayout.CENTER);
+        mPanelResponseBody.add(mScrollPaneResponseBody, BorderLayout.CENTER);
     }
 
     private void setupPanelResponseStatus() {
@@ -473,12 +485,19 @@ public class PostmanView extends javax.swing.JFrame {
 
         mPanelRequestBodyDetail.add(mPanelRequestBodyNone, "none");
 
-        mTextAreaBodyText.setFont(Fonts.GENERAL_PLAIN_12);
-        mTextAreaBodyText.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
-        scrollPaneRequestBodyText.setViewportView(mTextAreaBodyText);
+        mTextAreaRequestBodyText.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+        mTextAreaRequestBodyText.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         mPanelRequestBodyText.setLayout(new BorderLayout());
-        mPanelRequestBodyText.add(scrollPaneRequestBodyText, BorderLayout.CENTER);
+        mPanelRequestBodyText.add(mScrollPaneRequestBodyText, BorderLayout.CENTER);
         mPanelRequestBodyDetail.add(mPanelRequestBodyText, "text");
+
+        mTextAreaRequestBodyJson.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
+        mTextAreaRequestBodyJson.setCodeFoldingEnabled(true);
+        mTextAreaRequestBodyJson.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        mScrollPaneRequestBodyJson.setFoldIndicatorEnabled(true);
+        mPanelRequestBodyJson.setLayout(new BorderLayout());
+        mPanelRequestBodyJson.add(mScrollPaneRequestBodyJson, BorderLayout.CENTER);
+        mPanelRequestBodyDetail.add(mPanelRequestBodyJson, "json");
 
         mPanelRequestBodyBinary.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         mPanelRequestBodyBinary.setLayout(new BoxLayout(mPanelRequestBodyBinary, BoxLayout.PAGE_AXIS));
@@ -521,9 +540,8 @@ public class PostmanView extends javax.swing.JFrame {
         });
         mTableRequestHeaders.setCellSelectionEnabled(true);
         mTableRequestHeaders.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
-        scrollPaneRequestHeaders.setViewportView(mTableRequestHeaders);
 
-        mPanelRequestHeaders.add(scrollPaneRequestHeaders, BorderLayout.CENTER);
+        mPanelRequestHeaders.add(mScrollPaneRequestHeaders, BorderLayout.CENTER);
     }
 
     private void setupPanelRequestParams() {
@@ -547,9 +565,8 @@ public class PostmanView extends javax.swing.JFrame {
         });
         mTableRequestParams.setCellSelectionEnabled(true);
         mTableRequestParams.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
-        scrollPaneRequestParams.setViewportView(mTableRequestParams);
 
-        mPanelRequestParams.add(scrollPaneRequestParams, BorderLayout.CENTER);
+        mPanelRequestParams.add(mScrollPaneRequestParams, BorderLayout.CENTER);
     }
 
     private void setupPanelRequestUrl() {
@@ -702,7 +719,7 @@ public class PostmanView extends javax.swing.JFrame {
         httpRequest.setMethod((HttpMethod) mComboBoxRequestMethod.getSelectedItem());
         httpRequest.setUrl(Optional.ofNullable(mTextFieldRequestUrl.getText()).orElse(""));
         if (!mRadioButtonRequestBodyNone.isSelected()) {
-            httpRequest.setBody(Optional.ofNullable(mTextAreaBodyText.getText()).orElse("").getBytes());
+            httpRequest.setBody(Optional.ofNullable(mTextAreaRequestBodyText.getText()).orElse("").getBytes());
             httpRequest.addHeader("Content-Length", String.valueOf(httpRequest.getBody().length));
         }
 
@@ -796,7 +813,7 @@ public class PostmanView extends javax.swing.JFrame {
             }
             mTableRequestHeaders.setModel(model);
 
-            mTextAreaBodyText.setText(httpRequestStorage.getBody());
+            mTextAreaRequestBodyText.setText(httpRequestStorage.getBody());
 
             List<AbstractButton> listButton = Collections.list(mButtonGroupRequestBodyType.getElements());
 
@@ -824,7 +841,7 @@ public class PostmanView extends javax.swing.JFrame {
             httpRequestStorage.setMethod((HttpMethod) mComboBoxRequestMethod.getSelectedItem());
             httpRequestStorage.setUrl(Optional.ofNullable(mTextFieldRequestUrl.getText()).orElse(""));
 
-            httpRequestStorage.setBody(mTextAreaBodyText.getText());
+            httpRequestStorage.setBody(mTextAreaRequestBodyText.getText());
 
             DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
             for (int i = 0; i < model.getRowCount(); i++) {
@@ -879,50 +896,63 @@ public class PostmanView extends javax.swing.JFrame {
         }
     }
 
-    private JButton mButtonChooseInputFile;
+    private ButtonGroup mButtonGroupRequestBodyType;
     private JFileChooser mFileChoose;
     private JPanel mPanelMenuAbove;
-    private JTextArea mTextAreaBodyText;
-    private JLabel mLabelUploadedFile;
-    private JTable mTableRequestHeaders;
-    private JTable mTableRequestParams;
-    private JPanel mPanelRequestUrl;
-    private JTextField mTextFieldRequestUrl;
-    private JPanel mPanelRequestBody;
-    private JTabbedPane mPanelRequestDetail;
-    private JPanel mPanelRequestHeaders;
+    private JButton mButtonNewRequest;
+    private JButton mButtonImportRequest;
+    private JButton mButtonExportRequest;
+
     private JPanel mPanelRequest;
+    private JPanel mPanelRequestUrl;
+    private JComboBox<String> mComboBoxRequestMethod;
+    private JTextField mTextFieldRequestUrl;
+    private JButton mButtonSendRequest;
+
+    private JTabbedPane mPanelRequestDetail;
     private JPanel mPanelRequestParams;
+    private JTable mTableRequestParams;
+    private JScrollPane mScrollPaneRequestParams;
+
+    private JPanel mPanelRequestHeaders;
+    private JTable mTableRequestHeaders;
+    private JScrollPane mScrollPaneRequestHeaders;
+
+    private JPanel mPanelRequestBody;
+    private JPanel mPanelRequestBodyType;
+    private JRadioButton mRadioButtonRequestBodyNone;
+    private JRadioButton mRadioButtonRequestBodyText;
+    private JRadioButton mRadioButtonRequestBodyJson;
+    private JRadioButton mRadioButtonBodyBinary;
+
+    private JPanel mPanelRequestBodyDetail;
     private JPanel mPanelRequestBodyNone;
     private JPanel mPanelRequestBodyText;
+    private JPanel mPanelRequestBodyJson;
     private JPanel mPanelRequestBodyBinary;
-    private JPanel mPanelResponseCookies;
-    private JScrollPane scrollPaneRequestParams;
-    private JScrollPane scrollPaneResponseHeaders;
-    private JScrollPane scrollPaneRequestHeaders;
-    private JScrollPane scrollPaneResponseBody;
-    private JScrollPane scrollPaneResponseCookies;
-    private JScrollPane scrollPaneRequestBodyText;
-    private JTabbedPane mTabbedPaneResponse;
-    private JComboBox<String> mComboBoxRequestMethod;
-    private JPanel mPanelResponseBody;
-    private JTextArea mTextAreaResponseBody;
-    private JTable mTableResponseCookies;
+
+    private JButton mButtonChooseInputFile;
+    private JLabel mLabelUploadedFile;
+    private TextEditor mTextAreaRequestBodyText;
+    private TextEditor mTextAreaRequestBodyJson;
+    private ScrollPaneEditor mScrollPaneRequestBodyText;
+    private ScrollPaneEditor mScrollPaneRequestBodyJson;
+    private JPanel mPanelResponse;
+    private JPanel mPanelResponseStatus;
+    private JLabel mLabelResponseStatus;
+
     private JPanel mPanelResponseDetail;
+    private JTabbedPane mTabbedPaneResponse;
+
+    private JPanel mPanelResponseBody;
+    private TextEditor mTextAreaResponseBody;
+    private ScrollPaneEditor mScrollPaneResponseBody;
+
+    private JPanel mPanelResponseCookies;
+    private JTable mTableResponseCookies;
+    private JScrollPane mScrollPaneResponseCookies;
+
     private JPanel mPanelResponseHeaders;
     private JTable mTableResponseHeaders;
-    private JLabel mLabelResponseStatus;
-    private JPanel mPanelResponseStatus;
-    private JPanel mPanelResponse;
-    private JPanel mPanelRequestBodyDetail;
-    private JButton mButtonSendRequest;
-    private JButton mButtonExportRequest;
-    private JButton mButtonImportRequest;
-    private JButton mButtonNewRequest;
-    private JRadioButton mRadioButtonBodyBinary;
-    private ButtonGroup mButtonGroupRequestBodyType;
-    private JRadioButton mRadioButtonRequestBodyJson;
-    private JRadioButton mRadioButtonRequestBodyNone;
-    private JPanel mPanelRequestBodyType;
-    private JRadioButton mRadioButtonRequestBodyText;
+    private JScrollPane mScrollPaneResponseHeaders;
 }
