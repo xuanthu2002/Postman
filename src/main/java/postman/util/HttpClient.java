@@ -110,7 +110,7 @@ public class HttpClient {
                     case "expires" -> cookie.setExpires(value);
                     case "path" -> cookie.setPath(value);
                     case "domain" -> cookie.setDomain(value.startsWith(".") ? value.substring(1) : value);
-                    case "httponly" -> cookie.setHttp(true);
+                    case "httponly" -> cookie.setHttpOnly(true);
                     case "secure" -> cookie.setSecure(true);
                     case "samesite" -> cookie.setSameSite(true);
                     case "max-age" -> {

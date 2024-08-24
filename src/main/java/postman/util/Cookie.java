@@ -8,24 +8,24 @@ public class Cookie {
     private String path;
     private String expires;
     private int size;
-    private boolean http;
+    private boolean httpOnly;
     private boolean secure;
     private boolean sameSite;
 
     public Cookie() {
-        this.http = false;
+        this.httpOnly = false;
         this.secure = false;
         this.sameSite = false;
     }
 
-    public Cookie(String key, String value, String domain, String path, String expires, int size, boolean http, boolean secure, boolean sameSite) {
+    public Cookie(String key, String value, String domain, String path, String expires, int size, boolean httpOnly, boolean secure, boolean sameSite) {
         this.key = key;
         this.value = value;
         this.domain = domain;
         this.path = path;
         this.expires = expires;
         this.size = size;
-        this.http = http;
+        this.httpOnly = httpOnly;
         this.secure = secure;
         this.sameSite = sameSite;
     }
@@ -78,12 +78,12 @@ public class Cookie {
         this.size = size;
     }
 
-    public boolean isHttp() {
-        return http;
+    public boolean isHttpOnly() {
+        return httpOnly;
     }
 
-    public void setHttp(boolean http) {
-        this.http = http;
+    public void setHttpOnly(boolean httpOnly) {
+        this.httpOnly = httpOnly;
     }
 
     public boolean isSecure() {

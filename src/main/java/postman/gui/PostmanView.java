@@ -484,11 +484,7 @@ public class PostmanView extends javax.swing.JFrame {
         mButtonChooseInputFile.setFont(Fonts.GENERAL_PLAIN_12);
         mButtonChooseInputFile.setText(Strings.SELECT_FILE);
         mButtonChooseInputFile.setFocusPainted(false);
-        mButtonChooseInputFile.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(ActionEvent evt) {
-                mButtonChooseInputFileActionPerformed(evt);
-            }
-        });
+        mButtonChooseInputFile.addActionListener(evt -> mButtonChooseInputFileActionPerformed());
         mPanelRequestBodyBinary.add(mButtonChooseInputFile);
 
         mLabelUploadedFile.setBorder(BorderFactory.createEmptyBorder(16, 1, 1, 1));
@@ -566,11 +562,7 @@ public class PostmanView extends javax.swing.JFrame {
         mButtonSendRequest.setForeground(Colors.WHITE_COLOR);
         mButtonSendRequest.setText(Strings.SEND);
         mButtonSendRequest.setFocusPainted(false);
-        mButtonSendRequest.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(ActionEvent evt) {
-                mButtonSendRequestActionPerformed(evt);
-            }
-        });
+        mButtonSendRequest.addActionListener(evt -> mButtonSendRequestActionPerformed());
 
         GroupLayout mPanelRequestUrlLayout = new GroupLayout(mPanelRequestUrl);
         mPanelRequestUrl.setLayout(mPanelRequestUrlLayout);
@@ -603,35 +595,23 @@ public class PostmanView extends javax.swing.JFrame {
         mButtonNewRequest.setFont(Fonts.GENERAL_PLAIN_12);
         mButtonNewRequest.setText(Strings.NEW);
         mButtonNewRequest.setFocusPainted(false);
-        mButtonNewRequest.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(ActionEvent evt) {
-                mButtonNewRequestActionPerformed(evt);
-            }
-        });
+        mButtonNewRequest.addActionListener(evt -> mButtonNewRequestActionPerformed());
         mPanelMenuAbove.add(mButtonNewRequest);
 
         mButtonImportRequest.setFont(Fonts.GENERAL_PLAIN_12);
         mButtonImportRequest.setText(Strings.IMPORT);
         mButtonImportRequest.setFocusPainted(false);
-        mButtonImportRequest.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(ActionEvent evt) {
-                mButtonImportRequestActionPerformed(evt);
-            }
-        });
+        mButtonImportRequest.addActionListener(evt -> mButtonImportRequestActionPerformed());
         mPanelMenuAbove.add(mButtonImportRequest);
 
         mButtonExportRequest.setFont(Fonts.GENERAL_PLAIN_12);
         mButtonExportRequest.setText(Strings.EXPORT);
         mButtonExportRequest.setFocusPainted(false);
-        mButtonExportRequest.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(ActionEvent evt) {
-                mButtonExportRequestActionPerformed(evt);
-            }
-        });
+        mButtonExportRequest.addActionListener(evt -> mButtonExportRequestActionPerformed());
         mPanelMenuAbove.add(mButtonExportRequest);
     }
 
-    private void mButtonSendRequestActionPerformed(java.awt.event.ActionEvent evt) {
+    private void mButtonSendRequestActionPerformed() {
         resetOutput();
 
         HttpRequest httpRequest = createRequest();
@@ -700,7 +680,7 @@ public class PostmanView extends javax.swing.JFrame {
                                 cookie.getDomain(),
                                 cookie.getPath(),
                                 cookie.getExpires(),
-                                cookie.isHttp(),
+                                cookie.isHttpOnly(),
                                 cookie.isSecure()
                         }
                 );
@@ -776,13 +756,13 @@ public class PostmanView extends javax.swing.JFrame {
         mRadioButtonRequestBodyNone.doClick();
     }
 
-    private void mButtonNewRequestActionPerformed(java.awt.event.ActionEvent evt) {
+    private void mButtonNewRequestActionPerformed() {
         resetInput();
         resetOutput();
         mTextFieldRequestUrl.requestFocus();
     }
 
-    private void mButtonImportRequestActionPerformed(java.awt.event.ActionEvent evt) {
+    private void mButtonImportRequestActionPerformed() {
         FileNameExtensionFilter filter = new FileNameExtensionFilter("req", "req");
         mFileChoose.setFileFilter(filter);
         mFileChoose.setSelectedFile(new File(""));
@@ -790,6 +770,11 @@ public class PostmanView extends javax.swing.JFrame {
         if (x == JFileChooser.APPROVE_OPTION) {
             String direct = mFileChoose.getSelectedFile().toString();
             HttpRequestStorage httpRequestStorage = Storage.importRequest(direct);
+
+            if (httpRequestStorage == null) {
+                mButtonNewRequest.doClick();
+                return;
+            }
 
             mComboBoxRequestMethod.setSelectedItem(httpRequestStorage.getMethod());
 
@@ -823,7 +808,7 @@ public class PostmanView extends javax.swing.JFrame {
         }
     }
 
-    private void mButtonExportRequestActionPerformed(java.awt.event.ActionEvent evt) {
+    private void mButtonExportRequestActionPerformed() {
         FileNameExtensionFilter filter = new FileNameExtensionFilter("req", "req");
         mFileChoose.setFileFilter(filter);
         mFileChoose.setSelectedFile(new File(""));
@@ -869,7 +854,7 @@ public class PostmanView extends javax.swing.JFrame {
         }
     }
 
-    private void mButtonChooseInputFileActionPerformed(java.awt.event.ActionEvent evt) {
+    private void mButtonChooseInputFileActionPerformed() {
         int x = mFileChoose.showOpenDialog(this);
         if (x == JFileChooser.APPROVE_OPTION) {
             String direction = mFileChoose.getSelectedFile().toString();

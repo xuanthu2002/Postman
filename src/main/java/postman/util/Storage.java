@@ -8,8 +8,7 @@ import java.io.ObjectOutputStream;
 public class Storage {
 
     public static void exportRequest(HttpRequestStorage httpRequestStorage, String direct) {
-        try {
-            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(direct));
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(direct))) {
             out.writeObject(httpRequestStorage);
         } catch (Exception ex) {
             System.err.println(ex);
@@ -17,10 +16,8 @@ public class Storage {
     }
 
     public static HttpRequestStorage importRequest(String direct) {
-        try {
-            ObjectInputStream inp = new ObjectInputStream(new FileInputStream(direct));
-            HttpRequestStorage httpRequestStorage = (HttpRequestStorage) inp.readObject();
-            return httpRequestStorage;
+        try (ObjectInputStream inp = new ObjectInputStream(new FileInputStream(direct))) {
+            return (HttpRequestStorage) inp.readObject();
         } catch (Exception ex) {
             System.err.println(ex);
         }
