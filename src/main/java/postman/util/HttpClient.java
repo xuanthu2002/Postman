@@ -1,5 +1,7 @@
 package postman.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import postman.exception.URLFormatException;
 
 import javax.net.ssl.SSLSocket;
@@ -13,6 +15,8 @@ import java.util.Optional;
 
 public class HttpClient {
 
+    private static final Logger log = LoggerFactory.getLogger(HttpClient.class);
+
     static byte[] blankLine = "\r\n\r\n".getBytes();
 
     public HttpResponse send(HttpRequest request) throws URLFormatException, IOException {
@@ -20,6 +24,8 @@ public class HttpClient {
     }
 
     public HttpResponse send(HttpRequest request, int limitRetry) throws IOException, URLFormatException {
+        log.info("Sending request \r\n{}", request);
+
         try (
                 Socket socket = createSocket(request);
                 InputStream in = socket.getInputStream();

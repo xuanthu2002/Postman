@@ -1,5 +1,7 @@
 package postman.gui;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import postman.exception.DecompressException;
 import postman.exception.URLFormatException;
 import postman.gui.constants.Colors;
@@ -22,11 +24,11 @@ import java.io.IOException;
 import java.net.URLConnection;
 import java.util.List;
 import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
 
 public class PostmanView extends javax.swing.JFrame {
+
+    private static final Logger log = LoggerFactory.getLogger(PostmanView.class);
 
     public PostmanView() {
 
@@ -47,7 +49,7 @@ public class PostmanView extends javax.swing.JFrame {
             UIManager.setLookAndFeel(previousLF);
         } catch (IllegalAccessException | UnsupportedLookAndFeelException | InstantiationException |
                  ClassNotFoundException e) {
-            e.printStackTrace();
+            log.error("Unable to set look and feel", e);
         }
 
         initializeRequestUIComponents();
@@ -688,7 +690,7 @@ public class PostmanView extends javax.swing.JFrame {
             mTableResponseCookies.setModel(modelCookieTable);
 
         } catch (HeadlessException | IOException | URLFormatException | DecompressException | DataFormatException ex) {
-            Logger.getLogger(PostmanView.class.getName()).log(Level.SEVERE, null, ex);
+            log.error("Failed to send request \r\n{}", httpRequest, ex);
             mLabelResponseStatus.setText(ex.getClass().getSimpleName());
             mTextAreaResponseBody.setText(ex.getMessage());
         }
@@ -799,7 +801,7 @@ public class PostmanView extends javax.swing.JFrame {
             List<AbstractButton> listButton = Collections.list(mButtonGroupRequestBodyType.getElements());
 
             for (AbstractButton button : listButton) {
-                if (button.getText().equals(httpRequestStorage.getTypeBody())) {
+                if (button.getText().equals(httpRequestStorage.getBodyType())) {
                     button.doClick();
                 }
             }
@@ -844,7 +846,7 @@ public class PostmanView extends javax.swing.JFrame {
 
             for (AbstractButton button : listButton) {
                 if (button.isSelected()) {
-                    httpRequestStorage.setTypeBody(button.getText());
+                    httpRequestStorage.setBodyType(button.getText());
                 }
             }
 

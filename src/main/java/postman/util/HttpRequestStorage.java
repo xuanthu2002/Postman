@@ -1,15 +1,17 @@
 package postman.util;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 public class HttpRequestStorage implements Serializable {
 
+    @Serial
     private static final long serialVersionUID = 1113799434508676095L;
     private HttpMethod method;
     private String url;
-    private String typeBody;
+    private String bodyType;
     private List<Object[]> headers = new ArrayList<>();
     private List<Object[]> params = new ArrayList<>();
     private String body;
@@ -18,10 +20,10 @@ public class HttpRequestStorage implements Serializable {
     public HttpRequestStorage() {
     }
 
-    public HttpRequestStorage(HttpMethod method, String url, String typeBody, String body, String fileName) {
+    public HttpRequestStorage(HttpMethod method, String url, String bodyType, String body, String fileName) {
         this.method = method;
         this.url = url;
-        this.typeBody = typeBody;
+        this.bodyType = bodyType;
         this.body = body;
         this.fileName = fileName;
     }
@@ -42,12 +44,12 @@ public class HttpRequestStorage implements Serializable {
         this.url = url;
     }
 
-    public String getTypeBody() {
-        return typeBody;
+    public String getBodyType() {
+        return bodyType;
     }
 
-    public void setTypeBody(String typeBody) {
-        this.typeBody = typeBody;
+    public void setBodyType(String bodyType) {
+        this.bodyType = bodyType;
     }
 
     public List<Object[]> getHeaders() {
