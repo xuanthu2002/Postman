@@ -52,8 +52,8 @@ public class HttpRequest {
 
     public String getStringHeaders() {
         StringBuilder headerStr = new StringBuilder();
-        headerStr.append(method).append(" ").append(HttpUrl.extractPath(url)).append(" HTTP/1.0").append("\r\n");
-        headerStr.append("Host: ").append(HttpUrl.extractHost(url)).append("\r\n");
+        headerStr.append(method).append(" ").append(HttpUtils.extractPath(url)).append(" HTTP/1.0").append("\r\n");
+        headerStr.append("Host: ").append(HttpUtils.extractHost(url)).append("\r\n");
         headers.forEach((key, value) -> headerStr.append(key).append(": ").append(headers.get(key)).append("\r\n"));
         return headerStr.toString();
     }
@@ -61,8 +61,8 @@ public class HttpRequest {
     @Override
     public String toString() {
         StringBuilder request = new StringBuilder();
-        request.append(method).append(" ").append(HttpUrl.extractPath(url)).append(" HTTP/1.0").append("\r\n");
-        request.append("Host: ").append(HttpUrl.extractHost(url)).append("\r\n");
+        request.append(method).append(" ").append(HttpUtils.extractPath(url)).append(" HTTP/1.0").append("\r\n");
+        request.append("Host: ").append(HttpUtils.extractHost(url)).append("\r\n");
         headers.forEach((key, value) ->
                 request.append(key).append(": ").append(headers.get(key)).append("\r\n")
         );

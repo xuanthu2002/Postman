@@ -105,7 +105,7 @@ public class PostmanView extends javax.swing.JFrame {
     }
 
     private void updateRequestParamsTable() {
-        Map<String, String> params = HttpUrl.extractParams(mTextFieldRequestUrl.getText().trim());
+        Map<String, String> params = HttpUtils.extractParams(mTextFieldRequestUrl.getText().trim());
         DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
         model.setRowCount(0);
         for (Map.Entry<String, String> entry : params.entrySet()) {

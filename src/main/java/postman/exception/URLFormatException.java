@@ -6,4 +6,7 @@ public class URLFormatException extends Exception {
         super(string);
     }
 
+    public URLFormatException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
