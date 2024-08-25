@@ -7,13 +7,13 @@ public class HttpRequest {
 
     private final Map<String, String> headers = new LinkedHashMap<>();
     private HttpMethod method;
-    private String url;
+    private HttpUrl url;
     private byte[] body;
 
     public HttpRequest() {
     }
 
-    public HttpRequest(HttpMethod method, String url) {
+    public HttpRequest(HttpMethod method, HttpUrl url) {
         this.method = method;
         this.url = url;
     }
@@ -30,11 +30,11 @@ public class HttpRequest {
         this.method = method;
     }
 
-    public String getUrl() {
+    public HttpUrl getUrl() {
         return url;
     }
 
-    public void setUrl(String url) {
+    public void setUrl(HttpUrl url) {
         this.url = url;
     }
 
@@ -52,8 +52,8 @@ public class HttpRequest {
 
     public String getStringHeaders() {
         StringBuilder headerStr = new StringBuilder();
-        headerStr.append(method).append(" ").append(HttpUtils.extractPath(url)).append(" HTTP/1.0").append("\r\n");
-        headerStr.append("Host: ").append(HttpUtils.extractHost(url)).append("\r\n");
+        headerStr.append(method).append(" ").append(url.extractPath()).append(" HTTP/1.0").append("\r\n");
+        headerStr.append("Host: ").append(url.extractHost()).append("\r\n");
         headers.forEach((key, value) -> headerStr.append(key).append(": ").append(headers.get(key)).append("\r\n"));
         return headerStr.toString();
     }
@@ -61,8 +61,8 @@ public class HttpRequest {
     @Override
     public String toString() {
         StringBuilder request = new StringBuilder();
-        request.append(method).append(" ").append(HttpUtils.extractPath(url)).append(" HTTP/1.0").append("\r\n");
-        request.append("Host: ").append(HttpUtils.extractHost(url)).append("\r\n");
+        request.append(method).append(" ").append(url.extractPath()).append(" HTTP/1.0").append("\r\n");
+        request.append("Host: ").append(url.extractHost()).append("\r\n");
         headers.forEach((key, value) ->
                 request.append(key).append(": ").append(headers.get(key)).append("\r\n")
         );

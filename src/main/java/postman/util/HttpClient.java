@@ -66,10 +66,10 @@ public class HttpClient {
             getResponseHeaders(reader, response);
 
             if (300 <= response.getStatusCode() && response.getStatusCode() < 400 && limitRetry > 0) {
-                List<String> redirects = response.getHeader("Location");
-                if (redirects != null) {
-                    String redirectUrl = redirects.get(0);
-                    request.setUrl(HttpUtils.getRedirectUrl(request.getUrl(), redirectUrl));
+                List<String> directions = response.getHeader("Location");
+                if (directions != null) {
+                    String direction = directions.get(0);
+                    request.getUrl().redirect(direction);
                     return send(request, limitRetry - 1);
                 }
             }
@@ -82,18 +82,21 @@ public class HttpClient {
     }
 
     private static Socket createSocket(HttpRequest request) throws IOException, URLFormatException {
-        if (request.getUrl().startsWith("https://")) {
+
+        HttpUrl url = request.getUrl();
+
+        if (url.getUrl().startsWith("https://")) {
             SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
             SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(
-                    HttpUtils.extractHost(request.getUrl()),
-                    HttpUtils.extractPort(request.getUrl())
+                    url.extractHost(),
+                    url.extractPort()
             );
             sslSocket.startHandshake();
             return sslSocket;
         }
         return new Socket(
-                HttpUtils.extractHost(request.getUrl()),
-                HttpUtils.extractPort(request.getUrl())
+                url.extractHost(),
+                url.extractPort()
         );
     }
 

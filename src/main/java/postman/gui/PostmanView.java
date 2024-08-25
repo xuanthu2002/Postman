@@ -114,7 +114,7 @@ public class PostmanView extends JFrame {
     }
 
     private void updateRequestParamsTable() {
-        Map<String, String> params = HttpUtils.extractParams(mTextFieldRequestUrl.getText().trim());
+        Map<String, String> params = HttpUrl.extractParams(mTextFieldRequestUrl.getText().trim());
         DefaultTableModel model = (DefaultTableModel) mTableRequestParams.getModel();
         model.setRowCount(0);
         for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -712,10 +712,10 @@ public class PostmanView extends JFrame {
 
     }
 
-    private HttpRequest createRequest() throws IOException {
+    private HttpRequest createRequest() throws IOException, URLFormatException {
         HttpRequest httpRequest = new HttpRequest();
         httpRequest.setMethod((HttpMethod) mComboBoxRequestMethod.getSelectedItem());
-        httpRequest.setUrl(Optional.ofNullable(mTextFieldRequestUrl.getText()).orElse(""));
+        httpRequest.setUrl(HttpUrl.of(mTextFieldRequestUrl.getText()));
         if (!mRadioButtonRequestBodyNone.isSelected()) {
             byte[] content = getRequestBody();
             httpRequest.setBody(content);
