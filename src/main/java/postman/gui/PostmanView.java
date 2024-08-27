@@ -1,6 +1,7 @@
 package postman.gui;
 
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import postman.exception.DecompressException;
@@ -641,23 +642,33 @@ public class PostmanView extends JFrame {
                 if (i.toLowerCase().contains("charset")) {
                     charset = i.substring(i.indexOf("charset=") + 8);
                 }
+                if (i.toLowerCase().contains("text/html")) {
+                    mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
+                } else if (i.toLowerCase().contains("application/json")) {
+                    mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
+                } else {
+                    mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+                }
             }
 
             String contentEncoding = Optional
                     .ofNullable(httpResponse.getHeader("Content-Encoding"))
                     .orElse(List.of("")).get(0);
 
+            String content;
             switch (contentEncoding.toLowerCase()) {
-                case "gzip" ->
-                        mTextAreaResponseBody.setText(Decompress.decompressGzip(httpResponse.getBody(), charset));
-                case "deflate" ->
-                        mTextAreaResponseBody.setText(Decompress.decompressDeflate(httpResponse.getBody(), charset));
-                case "br" ->
-                        mTextAreaResponseBody.setText(Decompress.decompressBrotli(httpResponse.getBody(), charset));
-                default -> mTextAreaResponseBody.setText(new String(httpResponse.getBody(), charset));
+                case "gzip" -> content = Decompress.decompressGzip(httpResponse.getBody(), charset);
+                case "deflate" -> content = Decompress.decompressDeflate(httpResponse.getBody(), charset);
+                case "br" -> content = Decompress.decompressBrotli(httpResponse.getBody(), charset);
+                default -> content = new String(httpResponse.getBody(), charset);
             }
-
+            if (mTextAreaResponseBody.getSyntaxEditingStyle().equals(SyntaxConstants.SYNTAX_STYLE_JSON)) {
+                JSONObject json = new JSONObject(content);
+                content = json.toString(Values.TAB_SIZE);
+            }
+            mTextAreaResponseBody.setText(content);
             mTextAreaResponseBody.setCaretPosition(0);
+
             mLabelResponseStatus.setText(httpResponse.getStatusCode() + " " + httpResponse.getStatusMessage());
 
             if (httpResponse.getHeader("Content-Type").get(0).equals("image/png")) {
