@@ -27,13 +27,14 @@ public class HttpUrl implements Serializable {
         if (url == null || url.isBlank()) {
             return false;
         }
-        String regex = "^(https?://)?" +            // Protocol
-                "(([Ww]){3}\\.)?" +                 // Optional www.
-                "(([a-zA-Z0-9-]+\\.[a-zA-Z]{2,})" +  // example.com
-                "|((\\d{1,3}\\.){3}\\d{1,3}))" +    // 192.168.1.56
-                "(:\\d+)?" +                        // Optional port
-                "(/.*)?" +                          // Optional path
-                "(\\?.+=.*)?$";                     // Optional query string
+        String regex = "^(https?://)?" +                    // Protocol
+                "(([Ww]){3}\\.)?" +                         // Optional www.
+                "(([a-zA-Z0-9-.]+\\.[a-zA-Z]{2,})" +        // example.com
+                "|((\\d{1,3}\\.){3}\\d{1,3})" +             // 192.168.1.56
+                "|(?i:localhost))" +                        // localhost
+                "(:\\d+)?" +                                // Optional port
+                "(/.*)?" +                                  // Optional path
+                "(\\?.+=.*)?$";                             // Optional query string
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(url);
         return matcher.matches();

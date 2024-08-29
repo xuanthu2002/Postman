@@ -16,7 +16,7 @@ class HttpUrlTest {
         assertDoesNotThrow(() -> new HttpUrl("example.com"));
         assertDoesNotThrow(() -> new HttpUrl("www.example.com"));
         assertDoesNotThrow(() -> new HttpUrl("https://example12322.com"));
-        assertDoesNotThrow(() -> new HttpUrl("https://example12322.com:8080"));
+        assertDoesNotThrow(() -> new HttpUrl("https://localhost:8080"));
         assertDoesNotThrow(() -> new HttpUrl("https://example12322.com:8080?a=b&c=d"));
     }
 
