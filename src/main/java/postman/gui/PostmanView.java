@@ -635,92 +635,112 @@ public class PostmanView extends JFrame {
 
         try {
             HttpRequest httpRequest = createRequest();
-            HttpResponse httpResponse = new HttpClient().send(httpRequest);
-
-            String charset = "utf8";
-            for (String i : Optional.ofNullable(httpResponse.getHeader("Content-Type")).orElse(new ArrayList<>())) {
-                if (i.toLowerCase().contains("charset")) {
-                    charset = i.substring(i.indexOf("charset=") + 8);
-                }
-                if (i.toLowerCase().contains("text/html")) {
-                    mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
-                } else if (i.toLowerCase().contains("application/json")) {
-                    mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
-                } else {
-                    mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
-                }
-            }
-
-            String contentEncoding = Optional
-                    .ofNullable(httpResponse.getHeader("Content-Encoding"))
-                    .orElse(List.of("")).get(0);
-
-            String content;
-            switch (contentEncoding.toLowerCase()) {
-                case "gzip" -> content = Decompress.decompressGzip(httpResponse.getBody(), charset);
-                case "deflate" -> content = Decompress.decompressDeflate(httpResponse.getBody(), charset);
-                case "br" -> content = Decompress.decompressBrotli(httpResponse.getBody(), charset);
-                default -> content = new String(httpResponse.getBody(), charset);
-            }
-            if (mTextAreaResponseBody.getSyntaxEditingStyle().equals(SyntaxConstants.SYNTAX_STYLE_JSON)) {
-                JSONObject json = new JSONObject(content);
-                content = json.toString(Values.TAB_SIZE);
-            }
-            mTextAreaResponseBody.setText(content);
-            mTextAreaResponseBody.setCaretPosition(0);
-
-            mLabelResponseStatus.setText(httpResponse.getStatusCode() + " " + httpResponse.getStatusMessage());
-
-            if (httpResponse.getHeader("Content-Type").get(0).equals("image/png")) {
-                FileNameExtensionFilter filter = new FileNameExtensionFilter("png", "PNG");
-                mFileChoose.setFileFilter(filter);
-                mFileChoose.setSelectedFile(new File(""));
-                int x = mFileChoose.showSaveDialog(this);
-
-                if (x == JFileChooser.APPROVE_OPTION) {
-                    String direct = mFileChoose.getSelectedFile().toString();
-                    if (!direct.endsWith(".png")) {
-                        direct += ".png";
-                    }
-                    File file = new File(direct);
-                    try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
-                        fileOutputStream.write(httpResponse.getBody());
+            mButtonSendRequest.setEnabled(false);
+            HttpClient.send(httpRequest, new HttpClient.OnResultListener() {
+                @Override
+                public void onSuccess(HttpResponse response) {
+                    mButtonSendRequest.setEnabled(true);
+                    try {
+                        showResponse(response);
+                    } catch (DecompressException | DataFormatException | IOException e) {
+                        onFailure(e);
                     }
                 }
-            }
 
-            DefaultTableModel model = (DefaultTableModel) mTableResponseHeaders.getModel();
-            model.setRowCount(0);
-            for (Map.Entry<String, List<String>> entry : httpResponse.getHeaders().entrySet()) {
-                for (String value : entry.getValue()) {
-                    model.addRow(new Object[]{entry.getKey(), value});
+                @Override
+                public void onFailure(Exception e) {
+                    mButtonSendRequest.setEnabled(true);
+                    log.error("Failed to send request", e);
+                    mLabelResponseStatus.setText(e.getClass().getSimpleName());
+                    mTextAreaResponseBody.setText(e.getMessage());
                 }
-            }
-            mTableResponseHeaders.setModel(model);
-
-            DefaultTableModel modelCookieTable = (DefaultTableModel) mTableResponseCookies.getModel();
-            modelCookieTable.setRowCount(0);
-            for (Cookie cookie : httpResponse.getCookies()) {
-                modelCookieTable.addRow(
-                        new Object[]{
-                                cookie.getKey(),
-                                cookie.getValue(),
-                                cookie.getDomain(),
-                                cookie.getPath(),
-                                cookie.getExpires(),
-                                cookie.isHttpOnly(),
-                                cookie.isSecure()
-                        }
-                );
-            }
-            mTableResponseCookies.setModel(modelCookieTable);
-
-        } catch (HeadlessException | IOException | URLFormatException | DecompressException | DataFormatException ex) {
+            });
+        } catch (HeadlessException | IOException | URLFormatException ex) {
             log.error("Failed to send request", ex);
             mLabelResponseStatus.setText(ex.getClass().getSimpleName());
             mTextAreaResponseBody.setText(ex.getMessage());
         }
 
+    }
+
+    private void showResponse(HttpResponse response) throws DecompressException, DataFormatException, IOException {
+        String charset = "utf8";
+        for (String i : Optional.ofNullable(response.getHeader("Content-Type")).orElse(new ArrayList<>())) {
+            if (i.toLowerCase().contains("charset")) {
+                charset = i.substring(i.indexOf("charset=") + 8);
+            }
+            if (i.toLowerCase().contains("text/html")) {
+                mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
+            } else if (i.toLowerCase().contains("application/json")) {
+                mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JSON);
+            } else {
+                mTextAreaResponseBody.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+            }
+        }
+
+        String contentEncoding = Optional
+                .ofNullable(response.getHeader("Content-Encoding"))
+                .orElse(List.of("")).get(0);
+
+        String content;
+        switch (contentEncoding.toLowerCase()) {
+            case "gzip" -> content = Decompress.decompressGzip(response.getBody(), charset);
+            case "deflate" -> content = Decompress.decompressDeflate(response.getBody(), charset);
+            case "br" -> content = Decompress.decompressBrotli(response.getBody(), charset);
+            default -> content = new String(response.getBody(), charset);
+        }
+        if (mTextAreaResponseBody.getSyntaxEditingStyle().equals(SyntaxConstants.SYNTAX_STYLE_JSON)) {
+            JSONObject json = new JSONObject(content);
+            content = json.toString(Values.TAB_SIZE);
+        }
+        mTextAreaResponseBody.setText(content);
+        mTextAreaResponseBody.setCaretPosition(0);
+
+        mLabelResponseStatus.setText(response.getStatusCode() + " " + response.getStatusMessage());
+
+        if (response.getHeader("Content-Type").get(0).equals("image/png")) {
+            FileNameExtensionFilter filter = new FileNameExtensionFilter("png", "PNG");
+            mFileChoose.setFileFilter(filter);
+            mFileChoose.setSelectedFile(new File(""));
+            int x = mFileChoose.showSaveDialog(this);
+
+            if (x == JFileChooser.APPROVE_OPTION) {
+                String direct = mFileChoose.getSelectedFile().toString();
+                if (!direct.endsWith(".png")) {
+                    direct += ".png";
+                }
+                File file = new File(direct);
+                try (FileOutputStream fileOutputStream = new FileOutputStream(file)) {
+                    fileOutputStream.write(response.getBody());
+                }
+            }
+        }
+
+        DefaultTableModel model = (DefaultTableModel) mTableResponseHeaders.getModel();
+        model.setRowCount(0);
+        for (Map.Entry<String, List<String>> entry : response.getHeaders().entrySet()) {
+            for (String value : entry.getValue()) {
+                model.addRow(new Object[]{entry.getKey(), value});
+            }
+        }
+        mTableResponseHeaders.setModel(model);
+
+        DefaultTableModel modelCookieTable = (DefaultTableModel) mTableResponseCookies.getModel();
+        modelCookieTable.setRowCount(0);
+        for (Cookie cookie : response.getCookies()) {
+            modelCookieTable.addRow(
+                    new Object[]{
+                            cookie.getKey(),
+                            cookie.getValue(),
+                            cookie.getDomain(),
+                            cookie.getPath(),
+                            cookie.getExpires(),
+                            cookie.isHttpOnly(),
+                            cookie.isSecure()
+                    }
+            );
+        }
+        mTableResponseCookies.setModel(modelCookieTable);
     }
 
     private HttpRequest createRequest() throws IOException, URLFormatException {

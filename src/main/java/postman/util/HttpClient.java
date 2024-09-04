@@ -12,20 +12,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class HttpClient {
 
     private static final Logger log = LoggerFactory.getLogger(HttpClient.class);
+    private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     static byte[] blankLine = "\r\n\r\n".getBytes();
 
-    public HttpResponse send(HttpRequest request) throws URLFormatException, IOException {
-        return send(request, 3);
+    public static void send(HttpRequest request, OnResultListener listener) {
+        send(request, 3, listener);
     }
 
-    public HttpResponse send(HttpRequest request, int limitRetry) throws IOException, URLFormatException {
+    public static void send(HttpRequest request, int limitRetry, OnResultListener listener) {
         log.info("Sending request \r\n{}", request);
+        executorService.submit(() -> runTask(request, limitRetry, listener));
+    }
 
+    private static void runTask(HttpRequest request, int limitRetry, OnResultListener listener) {
         try (
                 Socket socket = createSocket(request);
                 InputStream in = socket.getInputStream();
@@ -70,14 +76,17 @@ public class HttpClient {
                 if (directions != null) {
                     String direction = directions.get(0);
                     request.getUrl().redirect(direction);
-                    return send(request, limitRetry - 1);
+                    send(request, limitRetry - 1, listener);
+                    return;
                 }
             }
 
             response.setBody(bodyBytes);
             getResponseCookies(response);
 
-            return response;
+            listener.onSuccess(response);
+        } catch (URLFormatException | IOException e) {
+            listener.onFailure(e);
         }
     }
 
@@ -152,5 +161,15 @@ public class HttpClient {
         response.setStatusCode(Integer.parseInt(parts[1]));
         String statusMessage = String.join(" ", Arrays.copyOfRange(parts, 2, parts.length));
         response.setStatusMessage(statusMessage);
+    }
+
+
+    public interface OnResultListener {
+        void onSuccess(HttpResponse response);
+
+        void onFailure(Exception e);
+    }
+
+    private HttpClient() {
     }
 }
