@@ -29,5 +29,6 @@ public class TextEditor extends RSyntaxTextArea {
         this.setTabSize(TAB_SIZE);
         this.setTabsEmulated(true);
         this.setAntiAliasingEnabled(true);
+        this.setHighlightSecondaryLanguages(false);
     }
 }

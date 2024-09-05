@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import postman.exception.DecompressException;
 import postman.exception.URLFormatException;
+import postman.gui.components.EditableTable;
 import postman.gui.components.ScrollPaneEditor;
 import postman.gui.components.TextEditor;
 import postman.gui.constants.Colors;
@@ -22,10 +23,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URLConnection;
 import java.util.List;
 import java.util.*;
@@ -68,7 +66,6 @@ public class PostmanView extends JFrame {
     }
 
     private void initializeRequestUIComponents() {
-        configureGeneralTables();
         configureUrlTextField();
         configureRequestParamsTable();
         configureRequestHeadersTable();
@@ -203,31 +200,6 @@ public class PostmanView extends JFrame {
         mTableRequestHeaders.setModel(model);
     }
 
-    private void configureGeneralTables() {
-        JTextField cell = new JTextField();
-        cell.setFont(Fonts.GENERAL_PLAIN_12);
-        DefaultCellEditor singleClick = new DefaultCellEditor(cell);
-        singleClick.setClickCountToStart(1);
-
-        for (int i = 1; i < mTableRequestParams.getColumnCount(); i++) {
-            mTableRequestParams.setDefaultEditor(mTableRequestParams.getColumnClass(i), singleClick);
-        }
-        for (int i = 1; i < mTableRequestHeaders.getColumnCount(); i++) {
-            mTableRequestHeaders.setDefaultEditor(mTableRequestHeaders.getColumnClass(i), singleClick);
-        }
-        for (int i = 1; i < mTableResponseHeaders.getColumnCount(); i++) {
-            mTableResponseHeaders.setDefaultEditor(mTableResponseHeaders.getColumnClass(i), singleClick);
-        }
-        for (int i = 1; i < mTableResponseCookies.getColumnCount(); i++) {
-            mTableResponseCookies.setDefaultEditor(mTableResponseCookies.getColumnClass(i), singleClick);
-        }
-
-        mTableRequestParams.putClientProperty("terminateEditOnFocusLost", true);
-        mTableRequestHeaders.putClientProperty("terminateEditOnFocusLost", true);
-        mTableResponseCookies.putClientProperty("terminateEditOnFocusLost", true);
-        mTableResponseHeaders.putClientProperty("terminateEditOnFocusLost", true);
-    }
-
     private void initComponents() {
         mButtonGroupRequestBodyType = new ButtonGroup();
         mFileChoose = new JFileChooser();
@@ -244,10 +216,10 @@ public class PostmanView extends JFrame {
 
         mPanelRequestDetail = new JTabbedPane();
         mPanelRequestParams = new JPanel();
-        mTableRequestParams = new JTable();
+        mTableRequestParams = new EditableTable();
         mScrollPaneRequestParams = new JScrollPane(mTableRequestParams, VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_AS_NEEDED);
         mPanelRequestHeaders = new JPanel();
-        mTableRequestHeaders = new JTable();
+        mTableRequestHeaders = new EditableTable();
         mScrollPaneRequestHeaders = new JScrollPane(mTableRequestHeaders, VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         mPanelRequestBody = new JPanel();
@@ -281,11 +253,11 @@ public class PostmanView extends JFrame {
         mScrollPaneResponseBody = new ScrollPaneEditor(mTextAreaResponseBody);
 
         mPanelResponseCookies = new JPanel();
-        mTableResponseCookies = new JTable();
+        mTableResponseCookies = new EditableTable();
         mScrollPaneResponseCookies = new JScrollPane(mTableResponseCookies, VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         mPanelResponseHeaders = new JPanel();
-        mTableResponseHeaders = new JTable();
+        mTableResponseHeaders = new EditableTable();
         mScrollPaneResponseHeaders = new JScrollPane(mTableResponseHeaders, VERTICAL_SCROLLBAR_ALWAYS, HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
 
@@ -356,8 +328,6 @@ public class PostmanView extends JFrame {
                 return types[columnIndex];
             }
         });
-        mTableResponseHeaders.setCellSelectionEnabled(true);
-        mTableResponseHeaders.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
 
         mPanelResponseHeaders.add(mScrollPaneResponseHeaders, BorderLayout.CENTER);
     }
@@ -379,8 +349,6 @@ public class PostmanView extends JFrame {
                 return types[columnIndex];
             }
         });
-        mTableResponseCookies.setCellSelectionEnabled(true);
-        mTableResponseCookies.setRowHeight(Values.DEFAULT_TABLE_ROW_HEIGHT);
 
         mPanelResponseCookies.add(mScrollPaneResponseCookies);
     }
@@ -660,7 +628,6 @@ public class PostmanView extends JFrame {
             mLabelResponseStatus.setText(ex.getClass().getSimpleName());
             mTextAreaResponseBody.setText(ex.getMessage());
         }
-
     }
 
     private void showResponse(HttpResponse response) throws DecompressException, DataFormatException, IOException {
@@ -784,13 +751,8 @@ public class PostmanView extends JFrame {
     private void resetOutput() {
         mLabelResponseStatus.setText("");
         mTextAreaResponseBody.setText("");
-        DefaultTableModel model = (DefaultTableModel) mTableResponseCookies.getModel();
-        model.setRowCount(0);
-        mTableResponseCookies.setModel(model);
-
-        model = (DefaultTableModel) mTableResponseHeaders.getModel();
-        model.setRowCount(0);
-        mTableResponseHeaders.setModel(model);
+        mTableResponseCookies.clear();
+        mTableResponseHeaders.clear();
     }
 
     private void resetInput() {
@@ -807,7 +769,7 @@ public class PostmanView extends JFrame {
         model.setRowCount(0);
         model.addRow(new Object[]{true, "User-Agent", "Postman"});
         model.addRow(new Object[]{true, "Accept", "*/*"});
-        model.addRow(new Object[]{false, "Accept-Encoding", "gzip, deflate, br"});
+        model.addRow(new Object[]{true, "Accept-Encoding", "gzip, deflate, br"});
         model.addRow(new Object[]{false, "", ""});
         mTableRequestHeaders.setModel(model);
 
@@ -950,11 +912,11 @@ public class PostmanView extends JFrame {
 
     private JTabbedPane mPanelRequestDetail;
     private JPanel mPanelRequestParams;
-    private JTable mTableRequestParams;
+    private EditableTable mTableRequestParams;
     private JScrollPane mScrollPaneRequestParams;
 
     private JPanel mPanelRequestHeaders;
-    private JTable mTableRequestHeaders;
+    private EditableTable mTableRequestHeaders;
     private JScrollPane mScrollPaneRequestHeaders;
 
     private JPanel mPanelRequestBody;
@@ -988,10 +950,10 @@ public class PostmanView extends JFrame {
     private ScrollPaneEditor mScrollPaneResponseBody;
 
     private JPanel mPanelResponseCookies;
-    private JTable mTableResponseCookies;
+    private EditableTable mTableResponseCookies;
     private JScrollPane mScrollPaneResponseCookies;
 
     private JPanel mPanelResponseHeaders;
-    private JTable mTableResponseHeaders;
+    private EditableTable mTableResponseHeaders;
     private JScrollPane mScrollPaneResponseHeaders;
 }
