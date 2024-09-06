@@ -1,7 +1,8 @@
 package postman.gui;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import postman.exception.DecompressException;
@@ -23,7 +24,10 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URLConnection;
 import java.util.List;
 import java.util.*;
@@ -657,8 +661,9 @@ public class PostmanView extends JFrame {
             default -> content = new String(response.getBody(), charset);
         }
         if (mTextAreaResponseBody.getSyntaxEditingStyle().equals(SyntaxConstants.SYNTAX_STYLE_JSON)) {
-            JSONObject json = new JSONObject(content);
-            content = json.toString(Values.TAB_SIZE);
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
+            content = writer.writeValueAsString(mapper.readTree(content));
         }
         mTextAreaResponseBody.setText(content);
         mTextAreaResponseBody.setCaretPosition(0);
