@@ -1,11 +1,8 @@
 package postman.gui;
 
-import javafx.scene.control.ComboBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import postman.gui.components.RequestPanel;
-import postman.gui.components.ResponsePanel;
-import postman.gui.constants.Values;
 import postman.util.HttpClient;
 import postman.util.HttpRequest;
 import postman.util.HttpResponse;
