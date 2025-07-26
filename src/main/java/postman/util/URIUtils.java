@@ -68,23 +68,25 @@ public class URIUtils implements Serializable {
 
     public int extractPort() throws URLFormatException {
         String authority = extractAuthority();
+        String hostPort = authority.contains("@") ? authority.split("@")[1] : authority;
 
-        String regex = ":(?!.*:)(\\d+)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(authority);
-
-        if (matcher.find()) {
-            String portStr = matcher.group(1);
-            if (portStr != null && !portStr.isEmpty()) {
-                try {
-                    return Integer.parseInt(portStr);
-                } catch (NumberFormatException e) {
-                    throw new URLFormatException(String.format("Port should be >= 0 and < 65536. Received type string ('%s').", portStr), e);
+        int colonIndex = hostPort.lastIndexOf(':');
+        if (colonIndex != -1) {
+            String portStr = hostPort.substring(colonIndex + 1);
+            try {
+                int port = Integer.parseInt(portStr);
+                if (port < 0 || port > 65535) {
+                    throw new URLFormatException(String.format("Port should be >= 0 and < 65536. Received type string ('%s').", portStr));
                 }
+                return port;
+            } catch (NumberFormatException e) {
+                throw new URLFormatException(String.format("Port should be >= 0 and < 65536. Received type string ('%s').", portStr), e);
             }
         }
+
         return url.startsWith("https://") ? 443 : 80;
     }
+
 
     public String extractPath() {
         String regex = "(?<!/)(/)(?!/)";
