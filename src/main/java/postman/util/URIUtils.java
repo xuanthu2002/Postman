@@ -8,23 +8,19 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class HttpUrl implements Serializable {
-
+public class URIUtils implements Serializable {
     private String url;
 
-    public HttpUrl(String url) throws URLFormatException {
-        if (!isValid(url)) {
-            throw new URLFormatException("Invalid URL format: " + url);
-        }
+    public URIUtils(String url) {
         this.url = url;
     }
 
-    public static HttpUrl of(String url) throws URLFormatException {
-        return new HttpUrl(url);
+    public static URIUtils of(String url) {
+        return new URIUtils(url);
     }
 
-    public static boolean isValid(String url) {
-        if (url == null || url.isBlank()) {
+    public static boolean validate(String url) {
+        if (url == null || url.isEmpty()) {
             return false;
         }
         String regex = "^(https?://)?" +                    // Protocol
@@ -43,8 +39,8 @@ public class HttpUrl implements Serializable {
     public static Map<String, String> extractParams(String url) {
         Map<String, String> params = new LinkedHashMap<>();
         if (url != null && url.contains("?")) {
-            String[] tmp = url.substring(url.indexOf("?") + 1).split("&");
-            for (String p : tmp) {
+            String[] query = url.substring(url.indexOf("?") + 1).split("&", -1);
+            for (String p : query) {
                 String[] kv = p.split("=", 2);
                 params.put(kv[0], kv.length > 1 ? kv[1] : "");
             }
@@ -83,7 +79,7 @@ public class HttpUrl implements Serializable {
                 try {
                     return Integer.parseInt(portStr);
                 } catch (NumberFormatException e) {
-                    throw new URLFormatException("Invalid port number format", e);
+                    throw new URLFormatException(String.format("Port should be >= 0 and < 65536. Received type string ('%s').", portStr), e);
                 }
             }
         }
@@ -126,23 +122,20 @@ public class HttpUrl implements Serializable {
         return url;
     }
 
-    public void redirect(String direction) {
+    public String getRedirect(String direction) {
         if (!isRelativePath(direction)) {
             url = direction;
-        }
-        else {
+        } else {
             url = extractOrigin() + direction;
         }
+        return url;
     }
 
     public String getUrl() {
         return url;
     }
 
-    public void setUrl(String url) throws URLFormatException {
-        if (!isValid(url)) {
-            throw new URLFormatException("Invalid URL format: " + url);
-        }
+    public void setUrl(String url) {
         this.url = url;
     }
 

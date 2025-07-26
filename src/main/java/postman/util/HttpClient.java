@@ -14,24 +14,34 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class HttpClient {
 
     private static final Logger log = LoggerFactory.getLogger(HttpClient.class);
     private static final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private static Future<?> future = null;
 
-    static byte[] blankLine = "\r\n\r\n".getBytes();
+    static final byte[] BLANK_LINE = "\r\n\r\n".getBytes();
+    static final int DEFAULT_RETRY_TIMES = 3;
+
+    public static void cancel() {
+        if (future != null) {
+            log.info("Cancelled request");
+            future.cancel(true);
+        }
+    }
 
     public static void send(HttpRequest request, OnResultListener listener) {
-        send(request, 3, listener);
+        send(request, DEFAULT_RETRY_TIMES, listener);
     }
 
     public static void send(HttpRequest request, int limitRetry, OnResultListener listener) {
         log.info("Sending request \r\n{}", request);
-        executorService.submit(() -> runTask(request, limitRetry, listener));
+        future = executorService.submit(() -> process(request, limitRetry, listener));
     }
 
-    private static void runTask(HttpRequest request, int limitRetry, OnResultListener listener) {
+    private static void process(HttpRequest request, int limitRetry, OnResultListener listener) {
         try (
                 Socket socket = createSocket(request);
                 InputStream in = socket.getInputStream();
@@ -45,6 +55,10 @@ public class HttpClient {
             }
             out.flush();
 
+            if (Thread.interrupted()) {
+                return;
+            }
+
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             int b;
             while ((b = in.read()) != -1) {
@@ -54,7 +68,7 @@ public class HttpClient {
             byte[] responseBytes = buffer.toByteArray();
             int headerLength = responseBytes.length - 4;
             for (int i = 0; i < responseBytes.length - 4; i++) {
-                if (Arrays.equals(Arrays.copyOfRange(responseBytes, i, i + 4), blankLine)) {
+                if (Arrays.equals(Arrays.copyOfRange(responseBytes, i, i + 4), BLANK_LINE)) {
                     headerLength = i;
                     break;
                 }
@@ -75,7 +89,8 @@ public class HttpClient {
                 List<String> directions = response.getHeader("Location");
                 if (directions != null) {
                     String direction = directions.get(0);
-                    request.getUrl().redirect(direction);
+                    direction = URIUtils.of(request.getUrl()).getRedirect(direction);
+                    request.setUrl(direction);
                     send(request, limitRetry - 1, listener);
                     return;
                 }
@@ -84,6 +99,10 @@ public class HttpClient {
             response.setBody(bodyBytes);
             getResponseCookies(response);
 
+            if (Thread.interrupted()) {
+                return;
+            }
+
             listener.onSuccess(response);
         } catch (URLFormatException | IOException e) {
             listener.onFailure(e);
@@ -91,21 +110,21 @@ public class HttpClient {
     }
 
     private static Socket createSocket(HttpRequest request) throws IOException, URLFormatException {
+        String url = request.getUrl();
+        URIUtils uriUtils = URIUtils.of(url);
 
-        HttpUrl url = request.getUrl();
-
-        if (url.getUrl().startsWith("https://")) {
+        if (url.startsWith("https://")) {
             SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
             SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(
-                    url.extractHost(),
-                    url.extractPort()
+                    uriUtils.extractHost(),
+                    uriUtils.extractPort()
             );
             sslSocket.startHandshake();
             return sslSocket;
         }
         return new Socket(
-                url.extractHost(),
-                url.extractPort()
+                uriUtils.extractHost(),
+                uriUtils.extractPort()
         );
     }
 
@@ -125,15 +144,34 @@ public class HttpClient {
                     value = s.substring(s.indexOf("=") + 1);
                 }
                 switch (key.toLowerCase()) {
-                    case "expires" -> cookie.setExpires(value);
-                    case "path" -> cookie.setPath(value);
-                    case "domain" -> cookie.setDomain(value.startsWith(".") ? value.substring(1) : value);
-                    case "httponly" -> cookie.setHttpOnly(true);
-                    case "secure" -> cookie.setSecure(true);
-                    case "samesite" -> cookie.setSameSite(true);
-                    case "max-age" -> {
+                    case "expires": {
+                        cookie.setExpires(value);
+                        break;
                     }
-                    default -> {
+                    case "path": {
+                        cookie.setPath(value);
+                        break;
+                    }
+                    case "domain": {
+                        cookie.setDomain(value.startsWith(".") ? value.substring(1) : value);
+                        break;
+                    }
+                    case "httponly": {
+                        cookie.setHttpOnly(true);
+                        break;
+                    }
+                    case "secure": {
+                        cookie.setSecure(true);
+                        break;
+                    }
+                    case "samesite": {
+                        cookie.setSameSite(true);
+                        break;
+                    }
+                    case "max-age": {
+                        break;
+                    }
+                    default: {
                         cookie.setKey(key);
                         cookie.setValue(value);
                     }
