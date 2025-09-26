@@ -11,6 +11,8 @@ import javax.swing.table.TableModel;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class EditableTable extends JTable {
     private boolean showDeleteOption;
@@ -47,9 +49,6 @@ public class EditableTable extends JTable {
                 columnModel.getColumn(i).setPreferredWidth(50);
                 columnModel.getColumn(i).setMaxWidth(120);
             }
-            else {
-                columnModel.getColumn(i).setMinWidth(120);
-            }
         }
 
         if (showDeleteOption && addedDeleteButton) {
@@ -84,7 +83,15 @@ public class EditableTable extends JTable {
     private TableCellButtonRenderer getDeleteButtonRenderer() {
         TableCellButtonRenderer deleteButton = new TableCellButtonRenderer();
         deleteButton.setText("\uE74D");
-        deleteButton.setFont(new Font("Segoe MDL2 Assets", Font.PLAIN, 12));
+//        deleteButton.setFont(new Font("Segoe MDL2 Assets", Font.PLAIN, 12));
+        Font iconFont = null;
+        try {
+            InputStream is = getClass().getResourceAsStream("/fonts/segmdl2.ttf");
+            iconFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont(12f);
+        } catch (FontFormatException | IOException e) {
+            throw new RuntimeException(e);
+        }
+        deleteButton.setFont(iconFont);
         deleteButton.setForeground(Color.RED);
         deleteButton.setContentAreaFilled(false);
         deleteButton.setFocusPainted(false);

@@ -89,7 +89,7 @@ public class HttpClient {
                 List<String> directions = response.getHeader("Location");
                 if (directions != null) {
                     String direction = directions.get(0);
-                    direction = URIUtils.of(request.getUrl()).getRedirect(direction);
+                    direction = URIUtils.getRedirect(request.getUrl(), direction);
                     request.setUrl(direction);
                     send(request, limitRetry - 1, listener);
                     return;
@@ -111,21 +111,18 @@ public class HttpClient {
 
     private static Socket createSocket(HttpRequest request) throws IOException, URLFormatException {
         String url = request.getUrl();
-        URIUtils uriUtils = URIUtils.of(url);
+        String host = URIUtils.extractHost(url);
+        int port = URIUtils.extractPort(url);
 
         if (url.startsWith("https://")) {
             SSLSocketFactory sslSocketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
             SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(
-                    uriUtils.extractHost(),
-                    uriUtils.extractPort()
+                    host, port
             );
             sslSocket.startHandshake();
             return sslSocket;
         }
-        return new Socket(
-                uriUtils.extractHost(),
-                uriUtils.extractPort()
-        );
+        return new Socket(host, port);
     }
 
     private static void getResponseCookies(HttpResponse response) {

@@ -60,6 +60,7 @@ public class ResponsePanel extends JPanel implements PostmanContract.ResponseVie
         mPanelResponseDetail.setLayout(new BorderLayout());
 
         mTabbedPaneResponse.setFont(Fonts.GENERAL_PLAIN_12);
+        mTabbedPaneResponse.setFocusable(false);
 
         setupPanelResponseBody();
         mTabbedPaneResponse.addTab("Body", mPanelResponseBody);
@@ -76,20 +77,15 @@ public class ResponsePanel extends JPanel implements PostmanContract.ResponseVie
     private void setupPanelResponseHeaders() {
         mPanelResponseHeaders.setLayout(new BorderLayout());
 
-        mTableResponseHeaders.setModel(new DefaultTableModel(
+        mTableResponseHeaders.setModel(new FlexibleDefaultTableModel(
                 new String[]{
                         "Key", "Value"
-                }, 0
-        ) {
-            final Class[] types = new Class[]{
-                    String.class, String.class
-            };
-
-            @Override
-            public Class getColumnClass(int columnIndex) {
-                return types[columnIndex];
-            }
-        });
+                },
+                new Class[]{
+                        String.class, String.class
+                },
+                0
+        ));
 
         mPanelResponseHeaders.add(mScrollPaneResponseHeaders, BorderLayout.CENTER);
     }
@@ -97,20 +93,15 @@ public class ResponsePanel extends JPanel implements PostmanContract.ResponseVie
     private void setupPanelResponseCookies() {
         mPanelResponseCookies.setLayout(new BoxLayout(mPanelResponseCookies, BoxLayout.LINE_AXIS));
 
-        mTableResponseCookies.setModel(new DefaultTableModel(
+        mTableResponseCookies.setModel(new FlexibleDefaultTableModel(
                 new String[]{
                         "Name", "Value", "Domain", "Path", "Expires", "HttpOnly", "Secure"
-                }, 0
-        ) {
-            final Class[] types = new Class[]{
-                    String.class, String.class, String.class, String.class, String.class, String.class, String.class
-            };
-
-            @Override
-            public Class getColumnClass(int columnIndex) {
-                return types[columnIndex];
-            }
-        });
+                },
+                new Class[]{
+                        String.class, String.class, String.class, String.class, String.class, String.class, String.class
+                },
+                0
+        ));
 
         mPanelResponseCookies.add(mScrollPaneResponseCookies);
     }
@@ -239,40 +230,36 @@ public class ResponsePanel extends JPanel implements PostmanContract.ResponseVie
         mTableResponseCookies.setModel(modelCookieTable);
     }
 
-    private void resetOutput() {
+    public void resetOutput() {
         mLabelResponseStatus.setText("");
         mTextAreaResponseBody.setText("");
         mTableResponseCookies.clear();
         mTableResponseHeaders.clear();
     }
 
-    private JPanel mPanelResponseStatus;
-    private JLabel mLabelResponseStatus;
+    private final JPanel mPanelResponseStatus;
+    private final JLabel mLabelResponseStatus;
 
-    private JPanel mPanelResponseDetail;
-    private JTabbedPane mTabbedPaneResponse;
+    private final JPanel mPanelResponseDetail;
+    private final JTabbedPane mTabbedPaneResponse;
 
-    private JPanel mPanelResponseBody;
-    private TextEditor mTextAreaResponseBody;
-    private ScrollPaneEditor mScrollPaneResponseBody;
+    private final JPanel mPanelResponseBody;
+    private final TextEditor mTextAreaResponseBody;
+    private final ScrollPaneEditor mScrollPaneResponseBody;
 
-    private JPanel mPanelResponseCookies;
-    private EditableTable mTableResponseCookies;
-    private JScrollPane mScrollPaneResponseCookies;
+    private final JPanel mPanelResponseCookies;
+    private final EditableTable mTableResponseCookies;
+    private final JScrollPane mScrollPaneResponseCookies;
 
-    private JPanel mPanelResponseHeaders;
-    private EditableTable mTableResponseHeaders;
-    private JScrollPane mScrollPaneResponseHeaders;
+    private final JPanel mPanelResponseHeaders;
+    private final EditableTable mTableResponseHeaders;
+    private final JScrollPane mScrollPaneResponseHeaders;
 
     @Override
     public void onSuccess(HttpResponse response) {
         try {
             showResponse(response);
-        } catch (DecompressException e) {
-            throw new RuntimeException(e);
-        } catch (DataFormatException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
+        } catch (DecompressException | DataFormatException | IOException e) {
             throw new RuntimeException(e);
         }
     }
@@ -284,6 +271,7 @@ public class ResponsePanel extends JPanel implements PostmanContract.ResponseVie
 
     @Override
     public void onFailure(Exception e) {
-
+        mLabelResponseStatus.setText(e.getClass().getSimpleName());
+        mTextAreaResponseBody.setText(e.getMessage());
     }
 }

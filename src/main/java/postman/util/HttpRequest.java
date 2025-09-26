@@ -60,9 +60,8 @@ public class HttpRequest {
 
     public String getStringHeaders() {
         StringBuilder headerStr = new StringBuilder();
-        URIUtils uriUtils = new URIUtils(url);
-        headerStr.append(method).append(" ").append(uriUtils.extractPath()).append(" HTTP/1.0").append("\r\n");
-        headerStr.append("Host: ").append(uriUtils.extractHost()).append("\r\n");
+        headerStr.append(method).append(" ").append(URIUtils.extractPath(url)).append(" HTTP/1.0").append("\r\n");
+        headerStr.append("Host: ").append(URIUtils.extractHost(url)).append("\r\n");
         headers.forEach((key, value) -> headerStr.append(key).append(": ").append(headers.get(key)).append("\r\n"));
         return headerStr.toString();
     }

@@ -9,33 +9,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class URIUtils implements Serializable {
-    private String url;
-
-    public URIUtils(String url) {
-        this.url = url;
-    }
-
-    public static URIUtils of(String url) {
-        return new URIUtils(url);
-    }
-
-    public static boolean validate(String url) {
-        if (url == null || url.isEmpty()) {
-            return false;
-        }
-        String regex = "^(https?://)?" +                    // Protocol
-                "(([Ww]){3}\\.)?" +                         // Optional www.
-                "(([a-zA-Z0-9-.]+\\.[a-zA-Z]{2,})" +        // example.com
-                "|((\\d{1,3}\\.){3}\\d{1,3})" +             // 192.168.1.56
-                "|(?i:localhost))" +                        // localhost
-                "(:\\d+)?" +                                // Optional port
-                "(/.*)?" +                                  // Optional path
-                "(\\?.+=.*)?$";                             // Optional query string
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(url);
-        return matcher.matches();
-    }
-
     public static Map<String, String> extractParams(String url) {
         Map<String, String> params = new LinkedHashMap<>();
         if (url != null && url.contains("?")) {
@@ -48,14 +21,7 @@ public class URIUtils implements Serializable {
         return params;
     }
 
-    public static boolean isRelativePath(String path) {
-        if (path == null || path.isEmpty()) {
-            return false;
-        }
-        return !path.contains("://");
-    }
-
-    public String extractHost() {
+    public static String extractHost(String url) {
         String regex = "^(?:[a-zA-Z][a-zA-Z\\d+-.]*://)?([^:/\\s?#]+)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(url);
@@ -66,8 +32,8 @@ public class URIUtils implements Serializable {
         return url;
     }
 
-    public int extractPort() throws URLFormatException {
-        String authority = extractAuthority();
+    public static int extractPort(String url) throws URLFormatException {
+        String authority = extractAuthority(url);
         String hostPort = authority.contains("@") ? authority.split("@")[1] : authority;
 
         int colonIndex = hostPort.lastIndexOf(':');
@@ -88,7 +54,7 @@ public class URIUtils implements Serializable {
     }
 
 
-    public String extractPath() {
+    public static String extractPath(String url) {
         String regex = "(?<!/)(/)(?!/)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(url);
@@ -104,7 +70,7 @@ public class URIUtils implements Serializable {
         }
     }
 
-    public String extractOrigin() {
+    public static String extractOrigin(String url) {
         String regex = "(?<!/)(/)(?!/)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(url);
@@ -114,35 +80,35 @@ public class URIUtils implements Serializable {
         return url;
     }
 
-    public String extractAuthority() {
-        String regex = "^([a-zA-Z][a-zA-Z\\d+\\-.]*)://([^/?#]+)";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(url);
-        if (matcher.find()) {
-            return matcher.group(2);
+    public static String extractAuthority(String url) {
+        int index = url.indexOf("://");
+        if (index > -1) {
+            return extractAuthority(url.substring(index + 3));
+        }
+        index = url.indexOf("/");
+        if (index > -1) {
+            return url.substring(0, index);
+        }
+        index = url.indexOf("?");
+        if (index > -1) {
+            return url.substring(0, index);
         }
         return url;
     }
 
-    public String getRedirect(String direction) {
+    public static String getRedirect(String currentUri, String direction) {
         if (!isRelativePath(direction)) {
-            url = direction;
+            currentUri = direction;
         } else {
-            url = extractOrigin() + direction;
+            currentUri = extractOrigin(currentUri) + direction;
         }
-        return url;
+        return currentUri;
     }
 
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    @Override
-    public String toString() {
-        return this.url;
+    public static boolean isRelativePath(String path) {
+        if (path == null || path.isEmpty()) {
+            return false;
+        }
+        return !path.contains("://");
     }
 }

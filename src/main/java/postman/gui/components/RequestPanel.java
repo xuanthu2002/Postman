@@ -12,6 +12,7 @@ import postman.util.HttpRequest;
 import postman.util.URIUtils;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.TableModelEvent;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
@@ -98,29 +99,24 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
         mButtonSendRequest.setEnabled(false);
         mButtonSendRequest.addActionListener(e -> onClickSendRequest());
 
-        GroupLayout mPanelRequestUrlLayout = new GroupLayout(mPanelRequestUrl);
-        mPanelRequestUrl.setLayout(mPanelRequestUrlLayout);
-        mPanelRequestUrlLayout.setHorizontalGroup(
-                mPanelRequestUrlLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addGroup(mPanelRequestUrlLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addComponent(mComboBoxRequestMethod, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(mTextFieldRequestUrl, GroupLayout.DEFAULT_SIZE, 0, Short.MAX_VALUE)
-                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(mButtonSendRequest)
-                                .addContainerGap())
-        );
-        mPanelRequestUrlLayout.setVerticalGroup(
-                mPanelRequestUrlLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addGroup(mPanelRequestUrlLayout.createSequentialGroup()
-                                .addGap(8, 8, 8)
-                                .addGroup(mPanelRequestUrlLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                                        .addComponent(mComboBoxRequestMethod, GroupLayout.DEFAULT_SIZE, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(mButtonSendRequest, GroupLayout.Alignment.TRAILING, Values.BUTTON_SEND_HEIGHT, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(mTextFieldRequestUrl, GroupLayout.Alignment.TRAILING))
-                                .addContainerGap())
-        );
+        mPanelRequestUrl.setLayout(new GridBagLayout());
+        mPanelRequestUrl.setBorder(new EmptyBorder(8, 8, 8, 8));
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.insets = new Insets(4, 4, 4, 4);
+        constraints.anchor = GridBagConstraints.WEST;
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        constraints.fill = GridBagConstraints.BOTH;
+        constraints.weightx = 0;
+        mPanelRequestUrl.add(mComboBoxRequestMethod, constraints);
+
+        constraints.gridx = 1;
+        constraints.weightx = 1;
+        mPanelRequestUrl.add(mTextFieldRequestUrl, constraints);
+
+        constraints.gridx = 2;
+        constraints.weightx = 0;
+        mPanelRequestUrl.add(mButtonSendRequest, constraints);
 
         configureUrlTextField();
     }
@@ -153,6 +149,7 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
 
     private void initPanelRequestDetail() {
         mPanelRequestDetail.setFont(Fonts.GENERAL_PLAIN_12);
+        mPanelRequestDetail.setFocusable(false);
 
         initPanelRequestParams();
         mPanelRequestDetail.addTab("Params", mPanelRequestParams);
@@ -262,17 +259,6 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
         mPanelRequestBody.add(mPanelRequestBodyType, BorderLayout.PAGE_START);
 
         mPanelRequestBodyDetail.setLayout(new CardLayout());
-
-        GroupLayout mPanelRequestBodyNoneLayout = new GroupLayout(mPanelRequestBodyNone);
-        mPanelRequestBodyNone.setLayout(mPanelRequestBodyNoneLayout);
-        mPanelRequestBodyNoneLayout.setHorizontalGroup(
-                mPanelRequestBodyNoneLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addGap(0, 0, Short.MAX_VALUE)
-        );
-        mPanelRequestBodyNoneLayout.setVerticalGroup(
-                mPanelRequestBodyNoneLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addGap(0, 0, Short.MAX_VALUE)
-        );
 
         mPanelRequestBodyDetail.add(mPanelRequestBodyNone, "none");
 
@@ -441,7 +427,6 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
 
         FlexibleDefaultTableModel model = (FlexibleDefaultTableModel) mTableRequestHeaders.getModel();
         model.setRowCount(0);
-        model.addRow(new Object[]{false, "", ""});
         model.setRow(new Object[]{true, "User-Agent", "Postman"}, 0);
         model.setRow(new Object[]{true, "Accept", "*/*"}, 1);
         model.setRow(new Object[]{true, "Accept-Encoding", "gzip, deflate, br"}, 2);
@@ -449,6 +434,10 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
         mTableRequestHeaders.setModel(model);
 
         mRadioButtonRequestBodyNone.doClick();
+        mTextAreaRequestBodyText.setText("");
+        mTextAreaRequestBodyJson.setText("");
+        mLabelUploadedFile.setText("");
+        bodyBytes = null;
     }
 
     private Map<String, String> getHeaders() {
@@ -487,7 +476,9 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
 
     @Override
     public void setRequest(HttpRequest httpRequest) {
-
+        mTextFieldRequestUrl.setText(httpRequest.getUrl());
+        Map<String, String> headers = httpRequest.getHeaders();
+//        mTableRequestHeaders.
     }
 
     @Override
