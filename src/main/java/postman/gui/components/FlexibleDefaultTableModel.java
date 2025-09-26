@@ -13,6 +13,11 @@ public class FlexibleDefaultTableModel extends DefaultTableModel {
         this.types = new LinkedList<>(Arrays.asList(types));
     }
 
+    public FlexibleDefaultTableModel(Object[] columnNames, Class<?>[] types, int rowCount) {
+        super(columnNames, rowCount);
+        this.types = new LinkedList<>(Arrays.asList(types));
+    }
+
     public void addColumn(Object columnName, Class<?> type) {
         super.addColumn(columnName);
         types.add(type);

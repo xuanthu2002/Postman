@@ -3,6 +3,7 @@ package postman.gui;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import postman.gui.components.RequestPanel;
+import postman.gui.components.ResponsePanel;
 import postman.util.HttpClient;
 import postman.util.HttpRequest;
 import postman.util.HttpResponse;
@@ -23,6 +24,7 @@ public class PostmanPresenter implements PostmanContract.Presenter {
     @Override
     public void onClickCreateNewRequest() {
         ((RequestPanel) mRequestView).resetInput();
+        ((ResponsePanel) mResponseView).resetOutput();
     }
 
     @Override
