@@ -4,7 +4,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class HttpRequest {
-
     private Map<String, String> headers = new LinkedHashMap<>();
     private HttpMethod method;
     private String url;

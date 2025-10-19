@@ -13,6 +13,8 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 public class EditableTable extends JTable {
     private boolean showDeleteOption;
@@ -80,13 +82,34 @@ public class EditableTable extends JTable {
         }
     }
 
+    public List<Object[]> getTableData() {
+        List<Object[]> data = new ArrayList<>();
+        for (int i = 0; i < getRowCount(); i++) {
+            Object[] row = new Object[getColumnCount()];
+            for (int j = 0; j < getColumnCount(); j++) {
+                row[j] = getValueAt(i, j);
+            }
+            data.add(row);
+        }
+        return data;
+    }
+
+    public void setTableData(List<Object[]> data) {
+        for (int i = 0; i < data.size(); i++) {
+            Object[] rowData = data.get(i);
+            for (int j = 0; j < getColumnCount() && j < rowData.length; j++) {
+                setValueAt(rowData[j], i, j);
+            }
+        }
+    }
+
     private TableCellButtonRenderer getDeleteButtonRenderer() {
         TableCellButtonRenderer deleteButton = new TableCellButtonRenderer();
         deleteButton.setText("\uE74D");
-//        deleteButton.setFont(new Font("Segoe MDL2 Assets", Font.PLAIN, 12));
-        Font iconFont = null;
+        Font iconFont;
         try {
             InputStream is = getClass().getResourceAsStream("/fonts/segmdl2.ttf");
+            assert is != null;
             iconFont = Font.createFont(Font.TRUETYPE_FONT, is).deriveFont(12f);
         } catch (FontFormatException | IOException e) {
             throw new RuntimeException(e);
@@ -127,6 +150,13 @@ public class EditableTable extends JTable {
     public TableCellRenderer getDefaultRenderer(Class<?> columnClass) {
         if (columnClass == String.class) {
             return new CellPaddingRenderer();
+        }
+        if (columnClass == Boolean.class) {
+            TableCellRenderer renderer = super.getDefaultRenderer(columnClass);
+            if (renderer instanceof JCheckBox) {
+                ((JCheckBox) renderer).setBorderPainted(false);
+            }
+            return renderer;
         }
         return super.getDefaultRenderer(columnClass);
     }

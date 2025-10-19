@@ -9,6 +9,7 @@ import postman.gui.constants.Strings;
 import postman.gui.constants.Values;
 import postman.util.HttpMethod;
 import postman.util.HttpRequest;
+import postman.util.HttpRequestStorage;
 import postman.util.URIUtils;
 
 import javax.swing.*;
@@ -20,9 +21,8 @@ import java.awt.event.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.List;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
 import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
@@ -86,6 +86,7 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
 
     private void initPanelRequestUrl() {
         mComboBoxRequestMethod.setFont(Fonts.GENERAL_BOLD_12);
+        mComboBoxRequestMethod.setFocusable(false);
         mComboBoxRequestMethod.setModel(new DefaultComboBoxModel<>(HttpMethod.values()));
 
         mTextFieldRequestUrl.setFont(Fonts.GENERAL_PLAIN_12);
@@ -96,7 +97,6 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
         mButtonSendRequest.setForeground(Colors.WHITE_COLOR);
         mButtonSendRequest.setText(Strings.SEND);
         mButtonSendRequest.setFocusPainted(false);
-        mButtonSendRequest.setEnabled(false);
         mButtonSendRequest.addActionListener(e -> onClickSendRequest());
 
         mPanelRequestUrl.setLayout(new GridBagLayout());
@@ -131,11 +131,6 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
                     return;
                 }
                 isEditingURL = true;
-                if (mTextFieldRequestUrl.getText().trim().isEmpty()) {
-                    mButtonSendRequest.setEnabled(false);
-                    return;
-                }
-                mButtonSendRequest.setEnabled(true);
                 updateRequestParamsTable();
             }
         });
@@ -385,6 +380,9 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
         fileDialog.setVisible(true);
         String directory = fileDialog.getDirectory();
         String filename = fileDialog.getFile();
+        if (directory == null || filename == null) {
+            return;
+        }
         String direction = Paths.get(directory, filename).toString();
         mLabelUploadedFile.setText(direction);
         String contentType;
@@ -409,12 +407,12 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
     }
 
     private byte[] getRequestBodyBytes() {
-        byte[] content;
+        byte[] content = new byte[0];
         if (mRadioButtonRequestBodyText.isSelected()) {
             content = Optional.ofNullable(mTextAreaRequestBodyText.getText()).orElse("").trim().getBytes();
         } else if (mRadioButtonRequestBodyJson.isSelected()) {
             content = Optional.ofNullable(mTextAreaRequestBodyJson.getText()).orElse("").trim().getBytes();
-        } else {
+        } else if (bodyBytes != null && bodyBytes.length > 0) {
             content = bodyBytes;
         }
         return content;
@@ -468,6 +466,33 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
         return request;
     }
 
+    @Override
+    public HttpRequestStorage getCurrentRequestStorage() {
+        HttpRequestStorage request = new HttpRequestStorage();
+        request.setMethod((HttpMethod) mComboBoxRequestMethod.getSelectedItem());
+        request.setUrl(mTextFieldRequestUrl.getText().trim());
+
+        List<AbstractButton> buttons = Collections.list(mButtonGroupRequestBodyType.getElements());
+        for (AbstractButton button : buttons) {
+            if (button.isSelected()) {
+                request.setBodyType(button.getText());
+            }
+        }
+
+        String bodyBase64 = Base64.getEncoder().encodeToString(getRequestBodyBytes());
+        request.setBodyBase64(bodyBase64);
+
+        List<Object[]> params = mTableRequestParams.getTableData();
+        request.setParams(params);
+
+        List<Object[]> headers = mTableRequestHeaders.getTableData();
+        request.setHeaders(headers);
+
+        request.setFileName(mLabelUploadedFile.getText().trim());
+
+        return request;
+    }
+
     private void onClickSendRequest() {
         if (mButtonSendRequest.getText().equals("CANCEL")) {
             mPresenter.onClickCancel();
@@ -475,15 +500,38 @@ public class RequestPanel extends JPanel implements PostmanContract.RequestView 
     }
 
     @Override
-    public void setRequest(HttpRequest httpRequest) {
-        mTextFieldRequestUrl.setText(httpRequest.getUrl());
-        Map<String, String> headers = httpRequest.getHeaders();
-//        mTableRequestHeaders.
+    public void setRequest(HttpRequestStorage request) {
+        mComboBoxRequestMethod.setSelectedItem(request.getMethod());
+        mTextFieldRequestUrl.setText(request.getUrl());
+        mTableRequestParams.setTableData(request.getParams());
+        mTableRequestHeaders.setTableData(request.getHeaders());
+        byte[] body = Base64.getDecoder().decode(request.getBodyBase64());
+        switch (request.getBodyType().toLowerCase()) {
+            case "text": {
+                mRadioButtonRequestBodyText.doClick();
+                mTextAreaRequestBodyText.setText(new String(body));
+                break;
+            }
+            case "json": {
+                mRadioButtonRequestBodyJson.doClick();
+                mTextAreaRequestBodyJson.setText(new String(body));
+                break;
+            }
+            case "binary": {
+                mRadioButtonBodyBinary.doClick();
+                bodyBytes = body;
+                break;
+            }
+            default: {
+                mRadioButtonRequestBodyNone.doClick();
+            }
+        }
+        mLabelUploadedFile.setText(request.getFileName());
     }
 
     @Override
     public void onSendingRequest() {
-        mButtonSendRequest.setText("CANCEL");
+//        mButtonSendRequest.setText("CANCEL");
     }
 
     @Override

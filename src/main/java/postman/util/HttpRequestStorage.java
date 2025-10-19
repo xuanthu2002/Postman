@@ -11,7 +11,7 @@ public class HttpRequestStorage implements Serializable {
     private String bodyType;
     private List<Object[]> headers = new ArrayList<>();
     private List<Object[]> params = new ArrayList<>();
-    private String body;
+    private String bodyBase64;
     private String fileName;
 
     public HttpRequestStorage() {
@@ -21,7 +21,7 @@ public class HttpRequestStorage implements Serializable {
         this.method = method;
         this.url = url;
         this.bodyType = bodyType;
-        this.body = body;
+        this.bodyBase64 = body;
         this.fileName = fileName;
     }
 
@@ -73,12 +73,12 @@ public class HttpRequestStorage implements Serializable {
         this.params.add(param);
     }
 
-    public String getBody() {
-        return body;
+    public String getBodyBase64() {
+        return bodyBase64;
     }
 
-    public void setBody(String body) {
-        this.body = body;
+    public void setBodyBase64(String bodyBase64) {
+        this.bodyBase64 = bodyBase64;
     }
 
     public String getFileName() {
@@ -88,5 +88,4 @@ public class HttpRequestStorage implements Serializable {
     public void setFileName(String fileName) {
         this.fileName = fileName;
     }
-
 }
