@@ -41,15 +41,15 @@ public class PostmanView extends JFrame {
     private void initComponents() {
         setTitle(Strings.APP_NAME);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        getContentPane().setLayout(new BorderLayout());
+        setLayout(new BorderLayout());
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         splitPane.setResizeWeight(0.4);
         splitPane.setTopComponent(mPanelRequest);
         splitPane.setBottomComponent(mPanelResponse);
 
-        getContentPane().add(mPanelMenuAbove, BorderLayout.PAGE_START);
-        getContentPane().add(splitPane, BorderLayout.CENTER);
+        setJMenuBar(mPanelMenuAbove);
+        add(splitPane, BorderLayout.CENTER);
 
         pack();
         setSize(Values.DEFAULT_LAUNCH_SIZE);
@@ -58,6 +58,6 @@ public class PostmanView extends JFrame {
     }
 
     private final RequestPanel mPanelRequest;
-    private final MenuPanel mPanelMenuAbove;
+    private final JMenuBar mPanelMenuAbove;
     private final ResponsePanel mPanelResponse;
 }

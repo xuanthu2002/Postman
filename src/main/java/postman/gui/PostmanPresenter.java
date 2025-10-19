@@ -4,9 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import postman.gui.components.RequestPanel;
 import postman.gui.components.ResponsePanel;
-import postman.util.HttpClient;
-import postman.util.HttpRequest;
-import postman.util.HttpResponse;
+import postman.util.*;
 
 public class PostmanPresenter implements PostmanContract.Presenter {
     private static final Logger log = LoggerFactory.getLogger(PostmanPresenter.class);
@@ -28,12 +26,15 @@ public class PostmanPresenter implements PostmanContract.Presenter {
     }
 
     @Override
-    public void onClickImport() {
-
+    public void onClickImport(String filePath) {
+        HttpRequestStorage request = FileUtils.importRequest(filePath);
+        mRequestView.setRequest(request);
     }
 
     @Override
-    public void onClickExport() {
+    public void onClickExport(String filePath) {
+        HttpRequestStorage request = mRequestView.getCurrentRequestStorage();
+        FileUtils.exportRequest(request, filePath);
     }
 
     @Override

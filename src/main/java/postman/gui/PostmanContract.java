@@ -1,6 +1,7 @@
 package postman.gui;
 
 import postman.util.HttpRequest;
+import postman.util.HttpRequestStorage;
 import postman.util.HttpResponse;
 
 import java.io.Serializable;
@@ -9,7 +10,9 @@ public class PostmanContract {
     public interface RequestView extends Serializable {
         HttpRequest getCurrentRequest();
 
-        void setRequest(HttpRequest httpRequest);
+        HttpRequestStorage getCurrentRequestStorage();
+
+        void setRequest(HttpRequestStorage httpRequest);
 
         void onSendingRequest();
 
@@ -27,9 +30,9 @@ public class PostmanContract {
     public interface Presenter extends Serializable {
         void onClickCreateNewRequest();
 
-        void onClickImport();
+        void onClickImport(String filePath);
 
-        void onClickExport();
+        void onClickExport(String filePath);
 
         void initRequest();
 
